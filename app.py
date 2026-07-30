@@ -68,6 +68,11 @@ from src.recommendation import (
 # 1. CẤU HÌNH CHUNG
 # =====================================================================
 BASE_DIR = Path(__file__).resolve().parent
+
+ASSETS_DIR = BASE_DIR / "assets"
+LOGO_PATH = ASSETS_DIR / "logo.png"
+BANNER_PATH = ASSETS_DIR / "banner.png"
+
 DATA_PATH = BASE_DIR / "data" / "data_motobikes.xlsx"
 
 MODEL_PATHS = {
@@ -112,9 +117,17 @@ st.set_page_config(
 
 CUSTOM_CSS = """
 <style>
-    .block-container {
-        padding-top: 1.2rem;
-        padding-bottom: 2rem;
+    .block-container{
+        padding-top:0.3rem;
+        padding-bottom:2rem;
+
+        padding-left:0.2rem;
+        padding-right:0.2rem;
+
+        max-width:100%;
+    }
+    section[data-testid="stSidebar"] > div:first-child{
+    padding-top:0rem;
     }
 
     [data-testid="stSidebar"] {
@@ -251,6 +264,14 @@ def render_page_header(title: str, subtitle: str) -> None:
         unsafe_allow_html=True,
     )
 
+def render_banner():
+
+    if BANNER_PATH.exists():
+
+        st.image(
+            BANNER_PATH,
+            use_container_width=True,
+        )
 
 @st.cache_data(show_spinner="Đang đọc dữ liệu...")
 def get_dataset(path: str) -> pd.DataFrame:
@@ -632,6 +653,13 @@ except Exception:
 # 4. SIDEBAR
 # =====================================================================
 with st.sidebar:
+    
+    # if LOGO_PATH.exists():
+        # st.image(
+            # LOGO_PATH,
+            # use_container_width=True,
+        # )
+        
     st.title("🏍️ MOTORBIKE ML")
     st.caption("Dự đoán giá và phát hiện bất thường")
 
@@ -651,8 +679,12 @@ with st.sidebar:
     st.write(f"**Dữ liệu:** `{DATA_PATH.name}`")
     st.write(f"**Số tin đăng:** {len(df_raw):,}")
     st.write(f"**Số thuộc tính:** {df_raw.shape[1]}")
-    # st.write("**Mô hình:** 3 pipeline theo phân khúc")
-
+    st.write("-------------------------------------")
+    st.write(f"**Đồ Án Tốt Nghiệp - DL07 - K314**")
+    st.write(f"**Nhóm thực hiện:** Phan Kim Thanh_Nguyễn Quang Lợi")
+    st.write("")
+    
+    
     st.divider()
     # st.caption(
         # "Target của mô hình là asking price trong tin đăng, "
@@ -664,6 +696,9 @@ with st.sidebar:
 # 5. BUSINESS PROBLEM
 # =====================================================================
 if menu == "Thách thức doanh nghiệp":
+    
+    render_banner()
+    
     render_page_header(
         "🏍️ Dự đoán giá và phát hiện bất thường cho các tin đăng bán xe máy cũ",
         "Ứng dụng Mô Hình Học Máy (Machine Learning) cho dữ liệu tin đăng tại TP.HCM trên Chợ Tốt.",
@@ -771,6 +806,9 @@ Tính 4 tín hiệu (Residual-z, Vi phạm P1/P99, Ngoài P10/P90 và Isolation 
 # 6. EVALUATION & REPORT
 # =====================================================================
 elif menu == "Đánh giá & Báo cáo":
+    
+    render_banner()
+    
     render_page_header(
         "📊 Đánh giá & Báo cáo",
         "Tổng quan dữ liệu, phân tích khám phá và kết quả đánh giá mô hình.",
@@ -929,6 +967,9 @@ elif menu == "Đánh giá & Báo cáo":
 # 7. NEW PREDICTION / ANALYSIS / RECOMMENDATION
 # =====================================================================
 else:
+    
+    render_banner()
+    
     render_page_header(
         "🔮 Dự báo / Phân tích / Khuyến nghị",
         "Dự đoán một xe, kiểm tra mức giá rao hoặc phân tích hàng loạt từ CSV/XLSX.",
