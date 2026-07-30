@@ -118,12 +118,10 @@ st.set_page_config(
 CUSTOM_CSS = """
 <style>
     .block-container{
-        padding-top:0.3rem;
-        padding-bottom:2rem;
-
+        padding-top:2rem;
+        padding-bottom:1rem;
         padding-left:0.2rem;
         padding-right:0.2rem;
-
         max-width:100%;
     }
     section[data-testid="stSidebar"] > div:first-child{
@@ -134,7 +132,18 @@ CUSTOM_CSS = """
         min-width: 305px;
         max-width: 305px;
     }
+    
+    [data-testid="stImage"]{
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+    }
 
+    [data-testid="stImage"] img{
+        display:block;
+        margin:0 !important;
+        padding:0 !important;
+    }
+    
     .hero {
         padding: 1.2rem 1.5rem;
         border: 1px solid rgba(128, 128, 128, 0.25);
@@ -265,13 +274,10 @@ def render_page_header(title: str, subtitle: str) -> None:
     )
 
 def render_banner():
-
-    if BANNER_PATH.exists():
-
-        st.image(
-            BANNER_PATH,
-            use_container_width=True,
-        )
+    st.image(
+        BANNER_PATH,
+        use_container_width=True,
+    )
 
 @st.cache_data(show_spinner="Đang đọc dữ liệu...")
 def get_dataset(path: str) -> pd.DataFrame:
