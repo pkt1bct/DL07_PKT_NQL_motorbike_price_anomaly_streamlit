@@ -1,0 +1,4 @@
+﻿Phân khúc,Model,MAE (triệu),RMSE (triệu),R2
+cao cấp,XGBoost (GBT),15962605.6,30386505.731,0.613
+trung cấp,XGBoost (GBT),6027988.793,16329944.216,0.5095
+phổ thông,XGBoost (GBT),4898760.499,11803052.256,0.3431

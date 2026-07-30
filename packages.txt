@@ -1,0 +1,15 @@
+build-essential
+g++
+gcc
+gfortran
+libgomp1
+libglib2.0-0
+libgl1
+libsm6
+libxext6
+libxrender1
+libfontconfig1
+libfreetype6
+libpng16-16
+libjpeg62-turbo
+zlib1g

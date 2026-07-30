@@ -1,0 +1,178 @@
+/* ==========================================================
+   Motorbike Price Prediction & Anomaly Detection
+   Custom CSS
+   ========================================================== */
+
+/* ---------- Main Layout ---------- */
+
+.block-container {
+    padding-top: 1rem;
+    padding-bottom: 2rem;
+    max-width: 1400px;
+}
+
+/* ---------- Sidebar ---------- */
+
+[data-testid="stSidebar"] {
+    background: #0f172a;
+}
+
+[data-testid="stSidebar"] * {
+    color: white;
+}
+
+/* ---------- Header ---------- */
+
+.hero {
+    background: linear-gradient(135deg,#1565C0,#1976D2,#42A5F5);
+    border-radius: 16px;
+    padding: 24px;
+    color: white;
+    margin-bottom: 20px;
+}
+
+.hero h1{
+    font-size:34px;
+    font-weight:700;
+    margin-bottom:8px;
+}
+
+.hero p{
+    font-size:16px;
+    opacity:.95;
+}
+
+/* ---------- Card ---------- */
+
+.info-card{
+    background:white;
+    border-radius:16px;
+    padding:20px;
+    border:1px solid #E5E7EB;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+    margin-bottom:18px;
+}
+
+.result-card{
+    background:#F8FAFC;
+    border-left:6px solid #1976D2;
+    border-radius:14px;
+    padding:18px;
+    margin-top:15px;
+}
+
+/* ---------- Metric ---------- */
+
+[data-testid="metric-container"]{
+    background:white;
+    border-radius:12px;
+    border:1px solid #E5E7EB;
+    padding:12px;
+    box-shadow:0 1px 5px rgba(0,0,0,.05);
+}
+
+/* ---------- Buttons ---------- */
+
+.stButton>button{
+    width:100%;
+    border-radius:10px;
+    height:48px;
+    font-weight:600;
+    border:none;
+    color:white;
+    background:#1976D2;
+}
+
+.stButton>button:hover{
+    background:#1259A7;
+}
+
+/* ---------- Download Button ---------- */
+
+.stDownloadButton>button{
+    width:100%;
+    border-radius:10px;
+    height:46px;
+}
+
+/* ---------- Input ---------- */
+
+.stTextInput input,
+.stNumberInput input,
+.stSelectbox,
+textarea{
+    border-radius:10px !important;
+}
+
+/* ---------- Tables ---------- */
+
+table{
+    border-collapse:collapse;
+}
+
+thead tr{
+    background:#1976D2;
+    color:white;
+}
+
+tbody tr:nth-child(even){
+    background:#F4F6F8;
+}
+
+/* ---------- Expander ---------- */
+
+.streamlit-expanderHeader{
+    font-weight:600;
+}
+
+/* ---------- Alerts ---------- */
+
+.success-box{
+    background:#E8F5E9;
+    border-left:6px solid #43A047;
+    padding:15px;
+    border-radius:8px;
+}
+
+.warning-box{
+    background:#FFF8E1;
+    border-left:6px solid #FB8C00;
+    padding:15px;
+    border-radius:8px;
+}
+
+.error-box{
+    background:#FDECEC;
+    border-left:6px solid #E53935;
+    padding:15px;
+    border-radius:8px;
+}
+
+/* ---------- Footer ---------- */
+
+.footer{
+    margin-top:35px;
+    text-align:center;
+    font-size:14px;
+    color:#777;
+}
+
+/* ---------- Charts ---------- */
+
+canvas{
+    border-radius:10px;
+}
+
+/* ---------- Mobile ---------- */
+
+@media(max-width:768px){
+
+.hero h1{
+    font-size:24px;
+}
+
+.block-container{
+    padding-top:0.5rem;
+}
+
+}
