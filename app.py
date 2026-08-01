@@ -117,77 +117,326 @@ st.set_page_config(
 
 CUSTOM_CSS = """
 <style>
-    .block-container{
-        padding-top:2rem;
-        padding-bottom:1rem;
-        padding-left:0.2rem;
-        padding-right:0.2rem;
-        max-width:100%;
-    }
-    section[data-testid="stSidebar"] > div:first-child{
-    padding-top:0rem;
-    }
 
-    [data-testid="stSidebar"] {
-        min-width: 305px;
-        max-width: 305px;
-    }
-    
-    [data-testid="stImage"]{
-    margin-top:0 !important;
-    margin-bottom:0 !important;
-    }
+/* =======================================================
+   FONT TOÀN TRANG
+======================================================= */
 
-    [data-testid="stImage"] img{
-        display:block;
-        margin:0 !important;
-        padding:0 !important;
-    }
-    
-    .hero {
-        padding: 1.2rem 1.5rem;
-        border: 1px solid rgba(128, 128, 128, 0.25);
-        border-radius: 16px;
-        margin-bottom: 1.25rem;
-    }
+html,
+body,
+[data-testid="stAppViewContainer"]{
+    font-family: "Inter","Segoe UI","Roboto","Arial",sans-serif;
+    background:#F8FAFC;
+    color:#243447;
+}
 
-    .hero h1 {
-        margin: 0;
-        font-size: 2rem;
-    }
+/* =======================================================
+   VÙNG NỘI DUNG
+======================================================= */
 
-    .hero p {
-        margin: 0.45rem 0 0 0;
-        opacity: 0.85;
-    }
+.block-container{
 
-    .info-card {
-        padding: 1rem 1.1rem;
-        border: 1px solid rgba(128, 128, 128, 0.25);
-        border-radius: 14px;
-        height: 100%;
-    }
+    max-width:100%;
 
-    .result-card {
-        padding: 1rem 1.2rem;
-        border: 1px solid rgba(128, 128, 128, 0.3);
-        border-radius: 14px;
-        margin-top: 0.8rem;
-    }
+    padding-top:1.2rem;
 
-    .small-note {
-        font-size: 0.9rem;
-        opacity: 0.8;
-    }
+    padding-left:0.6rem;
 
-    .footer {
-        text-align: center;
-        font-size: 0.85rem;
-        opacity: 0.75;
-        padding: 0.8rem 0;
-    }
+    padding-right:0.6rem;
+
+    padding-bottom:1rem;
+
+}
+
+/* =======================================================
+   SIDEBAR
+======================================================= */
+
+[data-testid="stSidebar"]{
+
+    background:#F1F6FD;
+
+    border-right:1px solid #D9E5F3;
+
+    min-width:305px;
+
+    max-width:305px;
+
+}
+
+section[data-testid="stSidebar"] > div:first-child{
+
+    padding-top:0.4rem;
+
+}
+
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] h4{
+
+    color:#12355B;
+
+    font-weight:750;
+
+}
+
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label{
+
+    color:#475467;
+
+    font-size:15px;
+
+}
+
+[data-testid="stSidebar"] div[role="radiogroup"] label{
+
+    font-size:16px;
+
+    padding:5px 0;
+
+}
+
+/* =======================================================
+   BANNER
+======================================================= */
+
+[data-testid="stImage"]{
+
+    margin-top:0!important;
+
+    margin-bottom:0!important;
+
+}
+
+[data-testid="stImage"] img{
+
+    border-radius:10px;
+
+    display:block;
+
+}
+
+/* =======================================================
+   HERO
+======================================================= */
+
+.hero{
+
+    background:linear-gradient(
+        135deg,
+        #FFFFFF 0%,
+        #F4F8FF 100%
+    );
+
+    border-left:6px solid #0B5ED7;
+
+    border:1px solid #D9E5F3;
+
+    border-radius:16px;
+
+    padding:1.3rem 1.6rem;
+
+    margin-top:1rem;
+
+    margin-bottom:1.2rem;
+
+    box-shadow:0 4px 12px rgba(0,0,0,.05);
+
+}
+
+.hero h1{
+
+    color:#12355B;
+
+    font-size:2rem;
+
+    font-weight:800;
+
+    margin:0;
+
+}
+
+.hero p{
+
+    color:#475467;
+
+    margin-top:0.5rem;
+
+    font-size:1.05rem;
+
+}
+
+/* =======================================================
+   CARD
+======================================================= */
+
+.info-card,
+.result-card{
+
+    background:#FFFFFF;
+
+    border:1px solid #D9E5F3;
+
+    border-radius:14px;
+
+    padding:1rem;
+
+    box-shadow:0 3px 10px rgba(0,0,0,.04);
+
+}
+
+/* =======================================================
+   METRIC
+======================================================= */
+
+[data-testid="stMetric"]{
+
+    background:#FFFFFF;
+
+    border:1px solid #D9E5F3;
+
+    border-radius:12px;
+
+    padding:12px;
+
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
+
+}
+
+[data-testid="stMetricValue"]{
+
+    color:#0B5ED7;
+
+    font-weight:700;
+
+}
+
+[data-testid="stMetricLabel"]{
+
+    color:#475467;
+
+}
+
+/* =======================================================
+   BUTTON
+======================================================= */
+
+.stButton > button{
+
+    background:#0B5ED7;
+
+    color:white;
+
+    border:none;
+
+    border-radius:8px;
+
+    font-weight:650;
+
+}
+
+.stButton > button:hover{
+
+    background:#12355B;
+
+    color:white;
+
+}
+
+/* =======================================================
+   INPUT
+======================================================= */
+
+[data-baseweb="input"]>div,
+[data-baseweb="select"]>div{
+
+    border-radius:8px;
+
+    border:1px solid #CBD5E1;
+
+}
+
+/* =======================================================
+   DATAFRAME
+======================================================= */
+
+[data-testid="stDataFrame"]{
+
+    border-radius:12px;
+
+    border:1px solid #D9E5F3;
+
+}
+
+/* =======================================================
+   TAB
+======================================================= */
+
+button[data-baseweb="tab"]{
+
+    font-weight:650;
+
+}
+
+button[data-baseweb="tab"][aria-selected="true"]{
+
+    color:#0B5ED7;
+
+}
+
+/* =======================================================
+   TITLE
+======================================================= */
+
+h1{
+
+    color:#12355B;
+
+    font-weight:800;
+
+}
+
+h2{
+
+    color:#12355B;
+
+}
+
+h3{
+
+    color:#12355B;
+
+}
+
+/* =======================================================
+   FOOTER
+======================================================= */
+
+.footer{
+
+    color:#667085;
+
+    text-align:center;
+
+    font-size:14px;
+
+    padding:12px;
+
+}
+
+.small-note{
+
+    color:#667085;
+
+    font-size:14px;
+
+}
+
 </style>
 """
+
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
