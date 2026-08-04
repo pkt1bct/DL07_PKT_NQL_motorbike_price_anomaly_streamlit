@@ -914,7 +914,16 @@ def render_vehicle_form(
     include_asking_price: bool,
 ) -> dict[str, Any]:
     """Form nhập thông tin một xe, dùng chung cho dự đoán và kiểm tra bất thường."""
+    
     brand_options = options.get("brands", ["Honda"])
+    brand_options = sorted(
+        {
+            str(value).strip()
+            for value in brand_options
+            if str(value).strip()
+        }
+    )
+
     brand = st.selectbox(
         "Thương hiệu *",
         options=brand_options,
@@ -923,16 +932,38 @@ def render_vehicle_form(
     )
 
     model_map = options.get("models_by_brand", {})
-    model_options = model_map.get(brand, options.get("models", ["Khác"]))
-    model_options = model_options or ["Khác"]
+
+    # Chuẩn hóa tên thương hiệu và danh sách dòng xe.
+    normalized_model_map = {
+        str(brand_name).strip(): sorted(
+            {
+                str(model).strip()
+                for model in model_list
+                if str(model).strip()
+            }
+        )
+        for brand_name, model_list in model_map.items()
+    }
+
+    # Không lấy toàn bộ dòng xe làm fallback vì có thể lẫn thương hiệu.
+    model_options = normalized_model_map.get(
+        str(brand).strip(),
+        [],
+    )
+
+    if not model_options:
+        model_options = ["Khác"]
 
     col1, col2 = st.columns(2)
+
     with col1:
+        # Key thay đổi theo thương hiệu để không giữ dòng xe của hãng trước.
         model_name = st.selectbox(
             "Dòng xe *",
             options=model_options,
-            key=f"{prefix}_model",
-        )
+            key=f"{prefix}_model_{brand}",
+        )    
+        
     with col2:
         vehicle_types = options.get("vehicle_types", ["Xe số", "Tay ga", "Tay côn/Moto"])
         vehicle_type = st.selectbox(
@@ -1622,18 +1653,19 @@ else:
     # -----------------------------------------------------------------
     with prediction_tab:
         st.subheader("Nhập thông tin xe")
-        with st.form("single_prediction_form", clear_on_submit=False):
-            prediction_values = render_vehicle_form(
-                form_options,
-                prefix="prediction",
-                include_asking_price=False,
-            )
-            submit_prediction = st.form_submit_button(
-                "💰 Dự đoán giá đề xuất",
-                use_container_width=True,
-                type="primary",
-                key="btn_prediction",
-            )
+
+        prediction_values = render_vehicle_form(
+            form_options,
+            prefix="prediction",
+            include_asking_price=False,
+        )
+
+        submit_prediction = st.button(
+            "💰 Dự đoán giá đề xuất",
+            use_container_width=True,
+            type="primary",
+            key="btn_prediction",
+        )
 
         if submit_prediction:
             try:
@@ -1666,18 +1698,19 @@ else:
     # -----------------------------------------------------------------
     with anomaly_tab:
         st.subheader("Nhập thông tin xe và giá rao")
-        with st.form("single_anomaly_form", clear_on_submit=False):
-            anomaly_values = render_vehicle_form(
-                form_options,
-                prefix="anomaly",
-                include_asking_price=True,
-            )
-            submit_anomaly = st.form_submit_button(
-                "🔎 Kiểm tra mức giá",
-                use_container_width=True,
-                type="primary",
-                key="btn_anomaly",
-            )
+
+        anomaly_values = render_vehicle_form(
+            form_options,
+            prefix="anomaly",
+            include_asking_price=True,
+        )
+
+        submit_anomaly = st.button(
+            "🔎 Kiểm tra mức giá",
+            use_container_width=True,
+            type="primary",
+            key="btn_anomaly",
+        )
 
         if submit_anomaly:
             try:
