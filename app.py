@@ -15,6 +15,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import base64
 from pathlib import Path
 from typing import Any
 
@@ -70,7 +71,7 @@ from src.recommendation import (
 BASE_DIR = Path(__file__).resolve().parent
 
 ASSETS_DIR = BASE_DIR / "assets"
-LOGO_PATH = ASSETS_DIR / "logo.png"
+LOGO_PATH = ASSETS_DIR / "logo_httm.png"
 BANNER_PATH = ASSETS_DIR / "banner.png"
 
 DATA_PATH = BASE_DIR / "data" / "data_motobikes.xlsx"
@@ -137,16 +138,14 @@ body,
 .block-container{
 
     max-width:100%;
-
-    padding-top:1.2rem;
-
-    padding-left:0.6rem;
-
-    padding-right:0.6rem;
-
-    padding-bottom:1rem;
+    padding-top:0 !important;
+    padding-left:.35rem !important;
+    padding-right:.35rem !important;
+    padding-bottom:1rem !important;
 
 }
+
+main .block-container{padding-top:0 !important;}
 
 /* =======================================================
    SIDEBAR
@@ -166,7 +165,31 @@ body,
 
 section[data-testid="stSidebar"] > div:first-child{
 
-    padding-top:0.4rem;
+    padding:0 !important;
+
+    margin:0 !important;
+
+}
+
+[data-testid="stSidebarContent"]{
+
+    padding-top:0 !important;
+
+    margin-top:0 !important;
+
+}
+
+[data-testid="stSidebarUserContent"]{
+
+    padding-top:0 !important;
+
+    margin-top:0 !important;
+
+}
+
+[data-testid="stSidebar"] .block-container{
+
+    padding:0;
 
 }
 
@@ -190,32 +213,37 @@ section[data-testid="stSidebar"] > div:first-child{
 
 }
 
-[data-testid="stSidebar"] div[role="radiogroup"] label{
-
-    font-size:16px;
-
-    padding:5px 0;
-
+[data-testid="stSidebar"] div[role="radiogroup"] label {
+    font-size: 1.12rem;
+    line-height: 1.5;
+    padding: 0.35rem 0;
 }
 
 /* =======================================================
-   BANNER
+   BANNER HTML
 ======================================================= */
 
-[data-testid="stImage"]{
-
-    margin-top:0!important;
-
-    margin-bottom:0!important;
-
+.banner-wrapper {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    line-height: 0;
+    overflow: visible;
 }
 
-[data-testid="stImage"] img{
-
-    border-radius:10px;
-
-    display:block;
-
+.banner-wrapper img {
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    object-fit: contain;
+    object-position: top center;
+    border-radius: 14px;
 }
 
 /* =======================================================
@@ -238,7 +266,7 @@ section[data-testid="stSidebar"] > div:first-child{
 
     padding:1.3rem 1.6rem;
 
-    margin-top:1rem;
+    margin-top:.5rem;
 
     margin-bottom:1.2rem;
 
@@ -283,7 +311,7 @@ section[data-testid="stSidebar"] > div:first-child{
 
     padding:1rem;
 
-    box-shadow:0 3px 10px rgba(0,0,0,.04);
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
 
 }
 
@@ -305,43 +333,204 @@ section[data-testid="stSidebar"] > div:first-child{
 
 }
 
-[data-testid="stMetricValue"]{
-
-    color:#0B5ED7;
-
-    font-weight:700;
-
+[data-testid="stMetricLabel"] {
+    color: #475467;
+    font-size: 1rem;
 }
 
-[data-testid="stMetricLabel"]{
+[data-testid="stMetricValue"] {
+    color: #0B5ED7;
+    font-size: 2rem;
+    font-weight: 750;
+}
 
-    color:#475467;
+[data-testid="stWidgetLabel"] p {
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: #334155;
+}
 
+[data-baseweb="input"] input,
+[data-baseweb="select"] input,
+[data-baseweb="textarea"] textarea {
+    font-size: 1rem;
 }
 
 /* =======================================================
-   BUTTON
+   BUTTON - st.button()
 ======================================================= */
+
+/* Nút thông thường */
 
 .stButton > button{
 
-    background:#0B5ED7;
+    background:#D32F2F !important;
 
-    color:white;
+    color:#FFFFFF !important;
 
-    border:none;
+    border:none !important;
 
-    border-radius:8px;
+    border-radius:10px;
 
-    font-weight:650;
+    font-size:1.05rem;
+
+    font-weight:700;
+
+    transition:all .25s ease;
 
 }
 
+/* Chữ và icon */
+
+.stButton > button p,
+.stButton > button span,
+.stButton > button div{
+
+    color:#FFFFFF !important;
+
+}
+
+.stButton > button svg{
+
+    fill:#FFFFFF !important;
+
+}
+
+/* Hover */
+
 .stButton > button:hover{
 
-    background:#12355B;
+    background:#B71C1C !important;
 
-    color:white;
+}
+
+/* Active */
+
+.stButton > button:active{
+
+    background:#8E0000 !important;
+
+}
+
+
+/* =======================================================
+   FORM SUBMIT BUTTON - st.form_submit_button()
+======================================================= */
+
+button[data-testid="stBaseButton-primaryFormSubmit"]{
+
+    background:#D32F2F !important;
+
+    color:#FFFFFF !important;
+
+    border:none !important;
+
+    border-radius:10px;
+
+    font-size:1.05rem;
+
+    font-weight:700;
+
+    transition:all .25s ease;
+
+}
+
+/* Chữ */
+
+button[data-testid="stBaseButton-primaryFormSubmit"]
+div[data-testid="stMarkdownContainer"] p{
+
+    color:#FFFFFF !important;
+
+    font-weight:700 !important;
+
+}
+
+/* Span */
+
+button[data-testid="stBaseButton-primaryFormSubmit"] span{
+
+    color:#FFFFFF !important;
+
+}
+
+/* Icon */
+
+button[data-testid="stBaseButton-primaryFormSubmit"] svg{
+
+    fill:#FFFFFF !important;
+
+}
+
+/* Hover */
+
+button[data-testid="stBaseButton-primaryFormSubmit"]:hover{
+
+    background:#B71C1C !important;
+
+}
+
+button[data-testid="stBaseButton-primaryFormSubmit"]:hover
+div[data-testid="stMarkdownContainer"] p{
+
+    color:#FFFFFF !important;
+
+}
+
+/* Active */
+
+button[data-testid="stBaseButton-primaryFormSubmit"]:active{
+
+    background:#8E0000 !important;
+
+}
+
+
+/* =======================================================
+   DOWNLOAD BUTTON - st.download_button()
+======================================================= */
+
+.stDownloadButton > button{
+
+    background:#0B5ED7 !important;
+
+    color:#FFFFFF !important;
+
+    border:none !important;
+
+    border-radius:10px;
+
+    font-size:1.02rem;
+
+    font-weight:650;
+
+    transition:all .25s ease;
+
+}
+
+.stDownloadButton > button p,
+.stDownloadButton > button span,
+.stDownloadButton > button div{
+
+    color:#FFFFFF !important;
+
+}
+
+.stDownloadButton > button svg{
+
+    fill:#FFFFFF !important;
+
+}
+
+.stDownloadButton > button:hover{
+
+    background:#0849A5 !important;
+
+}
+
+.stDownloadButton > button:active{
+
+    background:#063B83 !important;
 
 }
 
@@ -374,16 +563,23 @@ section[data-testid="stSidebar"] > div:first-child{
    TAB
 ======================================================= */
 
-button[data-baseweb="tab"]{
-
-    font-weight:650;
-
+button[data-baseweb="tab"] {
+    font-size: 1.08rem;
+    font-weight: 650;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    min-height: 3.2rem;
+    color: #475467;
 }
 
-button[data-baseweb="tab"][aria-selected="true"]{
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #E53935;
+    font-weight: 750;
+}
 
-    color:#0B5ED7;
-
+/* Chữ bên trong tab */
+button[data-baseweb="tab"] p {
+    font-size: 1.08rem;
 }
 
 /* =======================================================
@@ -411,6 +607,44 @@ h3{
 }
 
 /* =======================================================
+   NỘI DUNG VĂN BẢN
+======================================================= */
+
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li {
+
+    font-size:1.08rem;
+
+    line-height:1.75;
+
+    color:#334155;
+
+}
+
+/* Không áp dụng màu cho Markdown nằm trong nút */
+
+button[data-testid="stBaseButton-primaryFormSubmit"]
+div[data-testid="stMarkdownContainer"] p{
+
+    color:#FFFFFF !important;
+
+}
+
+/* Tiêu đề cấp 3 như Bối cảnh kinh doanh, Đặc trưng chính */
+[data-testid="stMarkdownContainer"] h3 {
+    font-size: 1.55rem;
+    line-height: 1.35;
+    margin-top: 1.2rem;
+    margin-bottom: 0.65rem;
+}
+
+/* Tiêu đề cấp 4 */
+[data-testid="stMarkdownContainer"] h4 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+}
+
+/* =======================================================
    FOOTER
 ======================================================= */
 
@@ -422,7 +656,7 @@ h3{
 
     font-size:14px;
 
-    padding:12px;
+    padding:18px;
 
 }
 
@@ -434,10 +668,96 @@ h3{
 
 }
 
+*{
+
+    box-sizing:border-box;
+
+}
+
+/* =======================================================
+   ẨN HEADER MẶC ĐỊNH CỦA STREAMLIT
+======================================================= */
+
+header[data-testid="stHeader"] {
+    display: none !important;
+} 
+
+div[data-testid="stToolbar"] {
+    display: none !important;
+}
+
+[data-testid="stDecoration"] {
+    display: none !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+[data-testid="stAppViewContainer"] > .main {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+section[data-testid="stSidebar"] > div{
+
+    padding-top:0 !important;
+
+    margin-top:0 !important;
+
+}
+
+#MainMenu{
+
+    visibility:hidden;
+
+}
+
+footer{
+
+    visibility:hidden;
+
+}
+
+/* =======================================================
+   LOGO SIDEBAR
+======================================================= */
+
+.sidebar-logo{
+
+    width:calc(100% + 2rem);
+
+    margin:-4rem -1rem 0.8rem -1rem;
+
+    padding:0;
+
+    background:#FFFFFF;
+
+    border-bottom:1px solid #D9E5F3;
+
+    overflow:hidden;
+
+}
+
+.sidebar-logo img{
+
+    display:block;
+
+    width:99%;
+
+    height:auto;
+
+    margin:0;
+
+}
+
 </style>
 """
 
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+# show_banner()
 
 
 # =====================================================================
@@ -522,10 +842,47 @@ def render_page_header(title: str, subtitle: str) -> None:
         unsafe_allow_html=True,
     )
 
-def render_banner():
-    st.image(
-        BANNER_PATH,
-        use_container_width=True,
+import base64
+
+
+def render_banner() -> None:
+    """Hiển thị đầy đủ banner bằng HTML thay cho st.image()."""
+
+    if not BANNER_PATH.exists():
+        st.warning(f"Không tìm thấy banner: {BANNER_PATH}")
+        return
+
+    banner_base64 = base64.b64encode(
+        BANNER_PATH.read_bytes()
+    ).decode("utf-8")
+
+    st.markdown(
+        f"""
+        <div class="banner-wrapper">
+            <img
+                src="data:image/png;base64,{banner_base64}"
+                alt="Dự đoán giá xe máy và phát hiện bất thường"
+            />
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+def render_sidebar_logo():
+    if not LOGO_PATH.exists():
+        return
+
+    logo_base64 = base64.b64encode(
+        LOGO_PATH.read_bytes()
+    ).decode()
+
+    st.markdown(
+        f"""
+    <div class="sidebar-logo">
+        <img src="data:image/png;base64,{logo_base64}" alt="Logo">
+    </div>
+    """,
+        unsafe_allow_html=True,
     )
 
 @st.cache_data(show_spinner="Đang đọc dữ liệu...")
@@ -750,10 +1107,11 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
         st.error(f"🚨 Kết luận: Mức giá có dấu hiệu **{label}**")
 
     st.caption(
-        f"Ngưỡng cảnh báo: {threshold:.1f}/100. "
-        "(phân vị 95% của điểm bất thường trên dữ liệu thị trường)."
-    )
-    
+            f"Ngưỡng cảnh báo: {threshold:.1f}/100, được xác định từ chính dữ liệu thị trường. "
+            "Sau khi hệ thống tính điểm bất thường cho toàn bộ tin đăng, phân vị 95% của các điểm được chọn làm ngưỡng cảnh báo. "
+            "Vì vậy chỉ khoảng 5% tin đăng có điểm bất thường cao nhất mới được gắn cờ để người dùng xem xét kỹ hơn."
+            )
+
     if score < threshold:
         st.success(
             f"Điểm bất thường ({score:.1f}) thấp hơn ngưỡng cảnh báo ({threshold:.1f}), nên tin đăng được đánh giá là Bình thường."
@@ -762,7 +1120,7 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
         st.error(
             f"Điểm bất thường ({score:.1f}) vượt ngưỡng cảnh báo ({threshold:.1f}), nên tin đăng được gắn cờ bất thường."
         )
-
+  
     show_figure(
         plot_prediction_comparison(
             predicted_price=predicted,
@@ -909,11 +1267,7 @@ except Exception:
 # =====================================================================
 with st.sidebar:
     
-    # if LOGO_PATH.exists():
-        # st.image(
-            # LOGO_PATH,
-            # use_container_width=True,
-        # )
+    render_sidebar_logo()
         
     st.title("🏍️ MOTORBIKE ML")
     st.caption("Dự đoán giá và phát hiện bất thường")
@@ -1091,7 +1445,12 @@ elif menu == "Đánh giá & Báo cáo":
             step=5,
         )
         st.dataframe(df_raw.head(preview_rows), use_container_width=True)
-
+        
+        st.markdown("""       
+                        - Các tin đăng xe máy cũ có mức giá rao bán khá đa dạng, phản ánh sự khác biệt về thương hiệu, dòng xe, năm sản xuất, số km đã đi và tình trạng xe.
+                        - Dữ liệu bao gồm nhiều thương hiệu (Honda, Yamaha, Piaggio, SYM...), nhiều đời xe (2003–2024) và mức sử dụng khác nhau, giúp mô hình học được đặc điểm của nhiều phân khúc xe máy cũ trên thị trường.
+                        """)
+    
         st.subheader("Dữ liệu thiếu")
         missing_table = pd.DataFrame(
             {
@@ -1101,12 +1460,22 @@ elif menu == "Đánh giá & Báo cáo":
         ).sort_values("Số dòng thiếu", ascending=False)
 
         st.dataframe(missing_table, use_container_width=True)
+        
+        st.markdown("""       
+                                - Dữ liệu có mức độ đầy đủ cao, tỷ lệ thiếu rất thấp (<3%).
+                                - Chỉ hai trường Khoảng giá min và Khoảng giá max có tỷ lệ thiếu khoảng 2,8%, các thuộc tính còn lại gần như đầy đủ, đảm bảo độ tin cậy cho quá trình huấn luyện mô hình.
+                                """)
 
         st.subheader("Thống kê mô tả")
         st.dataframe(
             df_eda.select_dtypes(include=np.number).describe().T,
             use_container_width=True,
         )
+        
+        st.markdown("""       
+                                - Dữ liệu gồm 7.208 tin đăng, tập trung chủ yếu ở phân khúc xe với giá trung vị 16,5 triệu đồng, tuổi xe khoảng 10 năm và quãng đường đã đi khoảng 28.000 km.
+                                - Đồng thời, dữ liệu xuất hiện một số giá trị ngoại lệ về giá và số km, do đó đã được xử lý trong giai đoạn tiền xử lý để nâng cao chất lượng mô hình.
+                                """)    
 
     with eda_tab:
         eda_choice = st.selectbox(
@@ -1168,6 +1537,16 @@ elif menu == "Đánh giá & Báo cáo":
             show_figure(plot_year_price_scatter(df_eda))
         elif eda_choice == "Ma trận tương quan":
             show_figure(plot_correlation_heatmap(df_eda))
+            
+            st.markdown("""
+                            ### Nhận xét
+            
+                            - Tuổi xe và Năm đăng ký có tương quan nghịch hoàn hảo (-1.00), chỉ cần giữ một biến để tránh trùng lặp thông tin.
+                            - Số Km đã đi và Km_clean có tương quan dương hoàn hảo (1.00), nên chỉ sử dụng Km_clean trong mô hình.
+                            - Giá xe có tương quan tuyến tính rất thấp với các biến số, cho thấy giá chịu ảnh hưởng tổng hợp của nhiều yếu tố.
+                            - ID không có ý nghĩa dự báo nên được loại bỏ khi huấn luyện mô hình.
+                            - Ngoài các cặp biến trùng thông tin, dữ liệu không có đa cộng tuyến đáng kể, phù hợp để xây dựng mô hình dự đoán.
+                            """)
         else:
             show_figure(plot_segment_distribution(df_eda))
 
@@ -1253,6 +1632,7 @@ else:
                 "💰 Dự đoán giá đề xuất",
                 use_container_width=True,
                 type="primary",
+                key="btn_prediction",
             )
 
         if submit_prediction:
@@ -1296,6 +1676,7 @@ else:
                 "🔎 Kiểm tra mức giá",
                 use_container_width=True,
                 type="primary",
+                key="btn_anomaly",
             )
 
         if submit_anomaly:
