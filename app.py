@@ -1651,7 +1651,9 @@ elif menu == "Đánh giá & Báo cáo":
             Dự án thử nghiệm nhiều thuật toán gồm Linear Regression, Decision Tree,
             Random Forest, XGBoost, LightGBM, CatBoost và SVR. 
             
-            Các mô hình dự đoán được xây dựng và huấn luyện riêng cho từng phân khúc xe trước khi được lưu trong thư mục models/ để phục vụ triển khai hệ thống..
+            Hệ thống sử dụng kiến thức thị trường xe máy Việt Nam từ "Thương Hiệu" và "Dòng Xe" để phân khúc xe và phản ánh đúng cách phân loại của thị trường xe máy Việt Nam gồm Phổ thông, Trung Cấp, và Cao Cấp.
+            
+            Các mô hình dự đoán được xây dựng và huấn luyện riêng cho từng phân khúc xe trước khi được lưu trong thư mục models/ để phục vụ triển khai hệ thống, dự đoán giá..
             """
         )
 
