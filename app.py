@@ -907,19 +907,18 @@ def get_price_models() -> dict[str, Any]:
         caocap_path=str(MODEL_PATHS["cao cấp"]),
     )
 
-
 def render_vehicle_form(
-    options: dict[str, list[Any]],
+    options: dict[str, Any],
     prefix: str,
     include_asking_price: bool,
+    reference_df: pd.DataFrame,
 ) -> dict[str, Any]:
-    """Form nhập thông tin một xe, dùng chung cho dự đoán và kiểm tra bất thường."""
-    
-    brand_options = options.get("brands", ["Honda"])
+    """Form nhập thông tin xe với các lựa chọn phụ thuộc nhau."""
+
     brand_options = sorted(
         {
             str(value).strip()
-            for value in brand_options
+            for value in options.get("brands", ["Honda"])
             if str(value).strip()
         }
     )
@@ -933,7 +932,6 @@ def render_vehicle_form(
 
     model_map = options.get("models_by_brand", {})
 
-    # Chuẩn hóa tên thương hiệu và danh sách dòng xe.
     normalized_model_map = {
         str(brand_name).strip(): sorted(
             {
@@ -945,53 +943,114 @@ def render_vehicle_form(
         for brand_name, model_list in model_map.items()
     }
 
-    # Không lấy toàn bộ dòng xe làm fallback vì có thể lẫn thương hiệu.
     model_options = normalized_model_map.get(
         str(brand).strip(),
         [],
-    )
-
-    if not model_options:
-        model_options = ["Khác"]
+    ) or ["Khác"]
 
     col1, col2 = st.columns(2)
 
     with col1:
-        # Key thay đổi theo thương hiệu để không giữ dòng xe của hãng trước.
         model_name = st.selectbox(
             "Dòng xe *",
             options=model_options,
             key=f"{prefix}_model_{brand}",
-        )    
-        
+        )
+
+    vehicle_reference = reference_df.copy()
+
+    vehicle_reference["_brand_clean"] = (
+        vehicle_reference["Thương hiệu"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+
+    vehicle_reference["_model_clean"] = (
+        vehicle_reference["Dòng xe"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+
+    selected_rows = vehicle_reference.loc[
+        (vehicle_reference["_brand_clean"] == str(brand).strip())
+        & (vehicle_reference["_model_clean"] == str(model_name).strip())
+    ].copy()
+
+    vehicle_types = sorted(
+        {
+            str(value).strip()
+            for value in selected_rows["Loại xe"].dropna()
+            if str(value).strip()
+        }
+    )
+
+    if not vehicle_types:
+        vehicle_types = options.get(
+            "vehicle_types",
+            ["Xe số", "Tay ga", "Tay côn/Moto"],
+        )
+
     with col2:
-        vehicle_types = options.get("vehicle_types", ["Xe số", "Tay ga", "Tay côn/Moto"])
         vehicle_type = st.selectbox(
             "Loại xe *",
             options=vehicle_types,
-            key=f"{prefix}_vehicle_type",
+            key=f"{prefix}_vehicle_type_{brand}_{model_name}",
+        )
+
+    engine_options = sorted(
+        {
+            str(value).strip()
+            for value in selected_rows["Dung tích xe"].dropna()
+            if str(value).strip()
+        }
+    )
+
+    if not engine_options:
+        engine_options = options.get(
+            "engine_sizes",
+            [
+                "Dưới 50 cc",
+                "50 - 100 cc",
+                "100 - 175 cc",
+                "Trên 175 cc",
+                "Không biết rõ",
+            ],
+        )
+
+    origins = sorted(
+        {
+            str(value).strip()
+            for value in selected_rows["Xuất xứ"].dropna()
+            if str(value).strip()
+        }
+    )
+
+    if not origins:
+        origins = options.get(
+            "origins",
+            ["Việt Nam", "Nhật Bản", "Thái Lan", "Đang cập nhật"],
         )
 
     col3, col4 = st.columns(2)
+
     with col3:
-        engine_options = options.get(
-            "engine_sizes",
-            ["Dưới 50 cc", "50 - 100 cc", "100 - 175 cc", "Trên 175 cc", "Không biết rõ"],
-        )
         engine_size = st.selectbox(
             "Dung tích xe *",
             options=engine_options,
-            index=safe_select_index(engine_options, "100 - 175 cc"),
-            key=f"{prefix}_engine",
+            key=f"{prefix}_engine_{brand}_{model_name}",
         )
+
     with col4:
-        origins = options.get("origins", ["Việt Nam", "Nhật Bản", "Thái Lan", "Đang cập nhật"])
         origin = st.selectbox(
             "Xuất xứ *",
             options=origins,
-            index=safe_select_index(origins, "Việt Nam"),
-            key=f"{prefix}_origin",
+            key=f"{prefix}_origin_{brand}_{model_name}",
         )
+
+    # Giữ nguyên phần năm đăng ký, số km, quận/huyện,
+    # tiêu đề, mô tả và giá rao bên dưới.
 
     current_year = dt.date.today().year
     col5, col6 = st.columns(2)
@@ -1658,6 +1717,7 @@ else:
             form_options,
             prefix="prediction",
             include_asking_price=False,
+            reference_df=df_raw,
         )
 
         submit_prediction = st.button(
@@ -1703,6 +1763,7 @@ else:
             form_options,
             prefix="anomaly",
             include_asking_price=True,
+            reference_df=df_raw,
         )
 
         submit_anomaly = st.button(
