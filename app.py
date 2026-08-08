@@ -1178,15 +1178,13 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
     label = str(result["label"])
     is_anomaly = bool(result["is_anomaly"])
     
-    normal_deviation_pct = result.get("normal_price_deviation_pct")
-
-    if normal_deviation_pct is None:
-        raise ValueError(
-            "anomaly_detector chưa trả về 'normal_price_deviation_pct'. "
-            "Vui lòng cập nhật src/anomaly_detector.py."
+    # Biên độ giá hợp lý lấy từ anomaly_detector
+    normal_deviation_pct = float(
+        result.get(
+            "normal_price_deviation_pct",
+            DEFAULT_CONFIG.normal_price_deviation_pct,
         )
-
-    normal_deviation_pct = float(normal_deviation_pct)
+    )
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Giá rao", format_million_vnd(asking_price_million))
@@ -1207,15 +1205,13 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
     else:
         st.error(f"🚨 Kết luận: Mức giá có dấu hiệu **{label}**")
 
-    anomaly_quantile = result.get("anomaly_quantile")
-
-    if anomaly_quantile is None:
-        raise ValueError(
-            "anomaly_detector chưa trả về 'anomaly_quantile'. "
-            "Vui lòng cập nhật src/anomaly_detector.py."
+    # Ngưỡng quantile lấy từ anomaly_detector
+    anomaly_quantile = float(
+        result.get(
+            "anomaly_quantile",
+            DEFAULT_CONFIG.anomaly_quantile,
         )
-
-    anomaly_quantile = float(anomaly_quantile)
+    )
 
     quantile_pct = anomaly_quantile * 100
     top_pct = (1.0 - anomaly_quantile) * 100
