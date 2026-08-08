@@ -43,6 +43,7 @@ from src.predictor import (
     predict_price,
 )
 from src.anomaly_detector import (
+    DEFAULT_CONFIG,
     analyze_batch_anomalies,
     analyze_price_anomaly,
 )
@@ -907,19 +908,18 @@ def get_price_models() -> dict[str, Any]:
         caocap_path=str(MODEL_PATHS["cao cấp"]),
     )
 
-
 def render_vehicle_form(
-    options: dict[str, list[Any]],
+    options: dict[str, Any],
     prefix: str,
     include_asking_price: bool,
+    reference_df: pd.DataFrame,
 ) -> dict[str, Any]:
-    """Form nhập thông tin một xe, dùng chung cho dự đoán và kiểm tra bất thường."""
-    
-    brand_options = options.get("brands", ["Honda"])
+    """Form nhập thông tin xe với các lựa chọn phụ thuộc nhau."""
+
     brand_options = sorted(
         {
             str(value).strip()
-            for value in brand_options
+            for value in options.get("brands", ["Honda"])
             if str(value).strip()
         }
     )
@@ -933,7 +933,6 @@ def render_vehicle_form(
 
     model_map = options.get("models_by_brand", {})
 
-    # Chuẩn hóa tên thương hiệu và danh sách dòng xe.
     normalized_model_map = {
         str(brand_name).strip(): sorted(
             {
@@ -945,53 +944,114 @@ def render_vehicle_form(
         for brand_name, model_list in model_map.items()
     }
 
-    # Không lấy toàn bộ dòng xe làm fallback vì có thể lẫn thương hiệu.
     model_options = normalized_model_map.get(
         str(brand).strip(),
         [],
-    )
-
-    if not model_options:
-        model_options = ["Khác"]
+    ) or ["Khác"]
 
     col1, col2 = st.columns(2)
 
     with col1:
-        # Key thay đổi theo thương hiệu để không giữ dòng xe của hãng trước.
         model_name = st.selectbox(
             "Dòng xe *",
             options=model_options,
             key=f"{prefix}_model_{brand}",
-        )    
-        
+        )
+
+    vehicle_reference = reference_df.copy()
+
+    vehicle_reference["_brand_clean"] = (
+        vehicle_reference["Thương hiệu"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+
+    vehicle_reference["_model_clean"] = (
+        vehicle_reference["Dòng xe"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+
+    selected_rows = vehicle_reference.loc[
+        (vehicle_reference["_brand_clean"] == str(brand).strip())
+        & (vehicle_reference["_model_clean"] == str(model_name).strip())
+    ].copy()
+
+    vehicle_types = sorted(
+        {
+            str(value).strip()
+            for value in selected_rows["Loại xe"].dropna()
+            if str(value).strip()
+        }
+    )
+
+    if not vehicle_types:
+        vehicle_types = options.get(
+            "vehicle_types",
+            ["Xe số", "Tay ga", "Tay côn/Moto"],
+        )
+
     with col2:
-        vehicle_types = options.get("vehicle_types", ["Xe số", "Tay ga", "Tay côn/Moto"])
         vehicle_type = st.selectbox(
             "Loại xe *",
             options=vehicle_types,
-            key=f"{prefix}_vehicle_type",
+            key=f"{prefix}_vehicle_type_{brand}_{model_name}",
+        )
+
+    engine_options = sorted(
+        {
+            str(value).strip()
+            for value in selected_rows["Dung tích xe"].dropna()
+            if str(value).strip()
+        }
+    )
+
+    if not engine_options:
+        engine_options = options.get(
+            "engine_sizes",
+            [
+                "Dưới 50 cc",
+                "50 - 100 cc",
+                "100 - 175 cc",
+                "Trên 175 cc",
+                "Không biết rõ",
+            ],
+        )
+
+    origins = sorted(
+        {
+            str(value).strip()
+            for value in selected_rows["Xuất xứ"].dropna()
+            if str(value).strip()
+        }
+    )
+
+    if not origins:
+        origins = options.get(
+            "origins",
+            ["Việt Nam", "Nhật Bản", "Thái Lan", "Đang cập nhật"],
         )
 
     col3, col4 = st.columns(2)
+
     with col3:
-        engine_options = options.get(
-            "engine_sizes",
-            ["Dưới 50 cc", "50 - 100 cc", "100 - 175 cc", "Trên 175 cc", "Không biết rõ"],
-        )
         engine_size = st.selectbox(
             "Dung tích xe *",
             options=engine_options,
-            index=safe_select_index(engine_options, "100 - 175 cc"),
-            key=f"{prefix}_engine",
+            key=f"{prefix}_engine_{brand}_{model_name}",
         )
+
     with col4:
-        origins = options.get("origins", ["Việt Nam", "Nhật Bản", "Thái Lan", "Đang cập nhật"])
         origin = st.selectbox(
             "Xuất xứ *",
             options=origins,
-            index=safe_select_index(origins, "Việt Nam"),
-            key=f"{prefix}_origin",
+            key=f"{prefix}_origin_{brand}_{model_name}",
         )
+
+    # Giữ nguyên phần năm đăng ký, số km, quận/huyện,
+    # tiêu đề, mô tả và giá rao bên dưới.
 
     current_year = dt.date.today().year
     col5, col6 = st.columns(2)
@@ -1113,10 +1173,11 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
     residual = float(asking_price_million) - predicted
     deviation_pct = residual / predicted * 100 if predicted else 0.0
 
-    score = float(result.get("anomaly_score", 0.0))
-    threshold = float(result.get("threshold", 95.0))
-    label = str(result.get("label", "Bình thường"))
-    is_anomaly = bool(result.get("is_anomaly", False))
+    score = float(result["anomaly_score"])
+    threshold = float(result["threshold"])
+            
+    label = str(result["label"])
+    is_anomaly = bool(result["is_anomaly"])
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Giá rao", format_million_vnd(asking_price_million))
@@ -1137,19 +1198,46 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
     else:
         st.error(f"🚨 Kết luận: Mức giá có dấu hiệu **{label}**")
 
-    st.caption(
-            f"Ngưỡng cảnh báo: {threshold:.1f}/100, được xác định từ chính dữ liệu thị trường. "
-            "Sau khi hệ thống tính điểm bất thường cho toàn bộ tin đăng, phân vị 95% của các điểm được chọn làm ngưỡng cảnh báo. "
-            "Vì vậy chỉ khoảng 5% tin đăng có điểm bất thường cao nhất mới được gắn cờ để người dùng xem xét kỹ hơn."
-            )
+    anomaly_quantile = float(
+        result.get(
+            "anomaly_quantile",
+            DEFAULT_CONFIG.anomaly_quantile,
+        )
+    )
+
+    quantile_pct = anomaly_quantile * 100
+    top_pct = (1.0 - anomaly_quantile) * 100
+
+    explain_text = (
+        f"Ngưỡng cảnh báo: {threshold:.1f}/100, được xác định từ "
+        "chính dữ liệu thị trường. Sau khi hệ thống tính điểm bất thường "
+        f"cho toàn bộ tin đăng, phân vị {quantile_pct:.0f}% của các điểm "
+        "được chọn làm ngưỡng cảnh báo. "
+        f"Vì vậy khoảng {top_pct:.0f}% tin đăng có điểm bất thường cao nhất "
+        "sẽ được gắn cờ để người dùng xem xét kỹ hơn."
+    )
 
     if score < threshold:
-        st.success(
-            f"Điểm bất thường ({score:.1f}) thấp hơn ngưỡng cảnh báo ({threshold:.1f}), nên tin đăng được đánh giá là Bình thường."
+        st.info(
+            f"""
+    **Điểm bất thường:** {score:.1f}/100
+
+    Điểm bất thường ({score:.1f}) thấp hơn ngưỡng cảnh báo ({threshold:.1f}),
+    nên tin đăng được đánh giá là **Bình thường**.
+
+    {explain_text}
+    """
         )
     else:
-        st.error(
-            f"Điểm bất thường ({score:.1f}) vượt ngưỡng cảnh báo ({threshold:.1f}), nên tin đăng được gắn cờ bất thường."
+        st.info(
+            f"""
+    **Điểm bất thường:** {score:.1f}/100
+
+    Điểm bất thường ({score:.1f}) vượt ngưỡng cảnh báo ({threshold:.1f}),
+    nên tin đăng được gắn cờ **bất thường**.
+
+    {explain_text}
+    """
         )
   
     show_figure(
@@ -1592,7 +1680,9 @@ elif menu == "Đánh giá & Báo cáo":
             Dự án thử nghiệm nhiều thuật toán gồm Linear Regression, Decision Tree,
             Random Forest, XGBoost, LightGBM, CatBoost và SVR. 
             
-            Các mô hình dự đoán được xây dựng và huấn luyện riêng cho từng phân khúc xe trước khi được lưu trong thư mục models/ để phục vụ triển khai hệ thống..
+            Hệ thống sử dụng kiến thức thị trường xe máy Việt Nam từ "Thương Hiệu" và "Dòng Xe" để phân khúc xe và phản ánh đúng cách phân loại của thị trường xe máy Việt Nam gồm Phổ thông, Trung Cấp, và Cao Cấp.
+            
+            Các mô hình dự đoán được xây dựng và huấn luyện riêng cho từng phân khúc xe trước khi được lưu trong thư mục models/ để phục vụ triển khai hệ thống, dự đoán giá..
             """
         )
 
@@ -1604,15 +1694,82 @@ elif menu == "Đánh giá & Báo cáo":
                 "`models/model_metrics.csv` để ứng dụng hiển thị tự động."
             )
             st.code(
-                "Phân khúc,Model,MAE (triệu),RMSE (triệu),R2\n"
+                "Phân khúc,Model,MAE (triệu đồng),RMSE (triệu đồng),R2\n"
                 "phổ thông,XGBoost,...,...,...\n"
                 "trung cấp,XGBoost,...,...,...\n"
                 "cao cấp,XGBoost,...,...,...",
                 language="text",
             )
         else:
-            st.dataframe(metrics_df, use_container_width=True, hide_index=True)
-            show_figure(plot_model_metrics(metrics_df))
+
+            # ======================================================
+            # FORMAT BẢNG ĐÁNH GIÁ MÔ HÌNH
+            # ======================================================
+
+            metrics_display = metrics_df.copy()
+
+            # Tự tìm tên cột MAE và RMSE
+            mae_col = next(
+                (c for c in metrics_display.columns if c.upper().startswith("MAE")),
+                None,
+            )
+
+            rmse_col = next(
+                (c for c in metrics_display.columns if c.upper().startswith("RMSE")),
+                None,
+            )
+
+            r2_col = next(
+                (c for c in metrics_display.columns if c.upper() == "R2"),
+                None,
+            )
+
+            # Nếu dữ liệu đang lưu là VNĐ thì đổi sang triệu
+            if mae_col is not None:
+                if metrics_display[mae_col].max() > 100000:
+                    metrics_display[mae_col] /= 1_000_000
+
+            if rmse_col is not None:
+                if metrics_display[rmse_col].max() > 100000:
+                    metrics_display[rmse_col] /= 1_000_000
+
+            column_config = {
+                "Phân khúc": st.column_config.TextColumn(
+                    "Phân khúc",
+                    width="medium",
+                ),
+                "Model": st.column_config.TextColumn(
+                    "Model",
+                    width="medium",
+                ),
+            }
+
+            if mae_col:
+                column_config[mae_col] = st.column_config.NumberColumn(
+                    "MAE (triệu đồng)",
+                    format="%.2f",
+                )
+
+            if rmse_col:
+                column_config[rmse_col] = st.column_config.NumberColumn(
+                    "RMSE (triệu đồng)",
+                    format="%.2f",
+                )
+
+            if r2_col:
+                column_config[r2_col] = st.column_config.NumberColumn(
+                    "R²",
+                    format="%.3f",
+                )
+
+            st.dataframe(
+                metrics_display,
+                use_container_width=True,
+                hide_index=True,
+                column_config=column_config,
+            )
+
+            show_figure(plot_model_metrics(metrics_display))
 
         st.markdown("#### Mô hình triển khai")
         deployed_df = pd.DataFrame(
@@ -1626,7 +1783,6 @@ elif menu == "Đánh giá & Báo cáo":
             ]
         )
         st.dataframe(deployed_df, use_container_width=True, hide_index=True)
-
 
 # =====================================================================
 # 7. NEW PREDICTION / ANALYSIS / RECOMMENDATION
@@ -1658,6 +1814,7 @@ else:
             form_options,
             prefix="prediction",
             include_asking_price=False,
+            reference_df=df_raw,
         )
 
         submit_prediction = st.button(
@@ -1703,6 +1860,7 @@ else:
             form_options,
             prefix="anomaly",
             include_asking_price=True,
+            reference_df=df_raw,
         )
 
         submit_anomaly = st.button(
@@ -1899,6 +2057,7 @@ else:
                 "anomaly_score",
                 "flag_final",
                 "flag_minmax",
+                "recommendation",
             ]
             
             missing_columns = [
@@ -1931,6 +2090,7 @@ else:
                     "anomaly_score",
                     "flag_final",
                     "flag_minmax",
+                    "recommendation",
                 ]
             ].copy()
             
@@ -1973,6 +2133,7 @@ else:
                     "anomaly_score": "Điểm bất thường",
                     "flag_final": "Kết luận",
                     "flag_minmax": "Tín hiệu giá",
+                    "recommendation": "Khuyến nghị",
                 },
                 inplace=True,
             )
@@ -1992,6 +2153,7 @@ else:
                     "Điểm bất thường",
                     "Kết luận",
                     "Tín hiệu giá",
+                    "Khuyến nghị",
                 ]
             ]
             
@@ -2000,10 +2162,10 @@ else:
                 value = str(value).strip()
 
                 if value == "Quá rẻ":
-                    return "🔴 Quá rẻ"
+                    return "🟡 Quá rẻ"
 
                 if value == "Quá đắt":
-                    return "🟠 Quá đắt"
+                    return "🔴 Quá đắt"
 
                 if value == "Bất thường":
                     return "🔴 Bất thường"
@@ -2016,31 +2178,7 @@ else:
             )
             
             # 8. TẠO KHUYẾN NGHỊ
-            # Ưu tiên dựa trên tín hiệu giá flag_minmax
-            
-            def create_recommendation(price_signal, conclusion):
-                price_signal = str(price_signal).strip()
-                conclusion = str(conclusion).strip()
-
-                if price_signal == "Quá rẻ":
-                    return "Nên kiểm tra kỹ"
-
-                if price_signal == "Quá đắt":
-                    return "Nên thương lượng"
-
-                if conclusion == "🔴 Bất thường":
-                    return "Cần kiểm tra thêm"
-
-                return "Giá hợp lý"
-            
-            display_df["Khuyến nghị"] = display_df.apply(
-                lambda row: create_recommendation(
-                    row["Tín hiệu giá"],
-                    row["Kết luận"],
-                ),
-                axis=1,
-            )
-            
+            # Dùng trực tiếp kết quả từ recommendation.py          
             # Có thể bỏ cột kỹ thuật này khỏi Dashboard
             display_df.drop(
                 columns=["Tín hiệu giá"],
@@ -2163,11 +2301,11 @@ else:
                     ),
                     "Khuyến nghị": st.column_config.TextColumn(
                         "Khuyến nghị",
-                        width="medium",
+                        width="large",
                     ),
                 },
             )
-
+            
             # 12. XUẤT DASHBOARD CSV
             # File Dashboard giống bảng đang hiển thị
             
@@ -2220,7 +2358,7 @@ else:
                     mime="text/csv",
                     use_container_width=True,
                     key="download_technical_csv",
-                )   
+                )       
                 
 # =====================================================================
 # 8. FOOTER
