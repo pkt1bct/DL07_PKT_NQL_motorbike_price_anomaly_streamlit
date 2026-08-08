@@ -299,7 +299,7 @@ def generate_recommendation(
             "flag_final",
             anomaly_result.get("label", "Bình thường"),
         )
-    )
+    ).strip()
 
     lower_reference = predicted * SAFE_PRICE_BUFFER_LOW
     upper_reference = predicted * SAFE_PRICE_BUFFER_HIGH
@@ -328,28 +328,31 @@ def generate_recommendation(
         _extract_signal_details(anomaly_result)
     )
 
-    if is_anomaly and residual < 0:
+    # =========================================================
+    # ƯU TIÊN KẾT LUẬN CUỐI CÙNG TỪ anomaly_detector.py
+    # =========================================================
+
+    if final_label == "Quá rẻ":
         level = "error"
         message = (
             f"{vehicle.capitalize()} có mức giá thấp bất thường so với "
-            "giá đề xuất. Không nên xem đây là cơ hội mua ngay; "
-            "cần kiểm tra kỹ rủi ro về giấy tờ và tình trạng xe."
+            "giá đề xuất. Cần kiểm tra kỹ giấy tờ, tình trạng xe và "
+            "nguyên nhân giá thấp trước khi giao dịch."
         )
 
         details.extend(
             [
-                "Yêu cầu xem xe trực tiếp; tránh chuyển tiền/cọc trước.",
-                "Xác minh xe không bị tranh chấp, cầm cố, mất cắp hoặc chỉ bán giấy.",
-                "Kiểm tra nguyên nhân giá thấp: cần tiền gấp, xe lỗi, xe ngập, "
-                "tai nạn, giấy tờ không hợp lệ hoặc tin không bán xe nguyên chiếc.",
+                "Yêu cầu xem xe trực tiếp; tránh chuyển tiền hoặc đặt cọc trước.",
+                "Xác minh cavet, số khung, số máy và danh tính người bán.",
+                "Kiểm tra nguy cơ xe lỗi, xe ngập, tai nạn hoặc giấy tờ không hợp lệ.",
             ]
         )
 
-    elif is_anomaly and residual > 0:
+    elif final_label == "Quá đắt":
         level = "warning"
         message = (
-            f"{vehicle.capitalize()} đang được rao cao bất thường so với "
-            "giá đề xuất. Nên thương lượng hoặc so sánh thêm các tin cùng nhóm."
+            f"{vehicle.capitalize()} đang được rao cao hơn mức giá đề xuất. "
+            "Nên thương lượng hoặc so sánh thêm với các xe tương đương."
         )
 
         target_offer = min(
@@ -364,31 +367,37 @@ def generate_recommendation(
                     f"**{_format_million(target_offer)}**, "
                     "sau khi kiểm tra tình trạng thực tế."
                 ),
-                "Chỉ chấp nhận mức giá cao nếu xe có hồ sơ bảo dưỡng tốt, "
-                "phụ kiện có giá trị, giấy tờ rõ ràng và tình trạng vượt trội.",
+                "Chỉ chấp nhận mức giá cao nếu xe có tình trạng, giấy tờ "
+                "hoặc phụ kiện thực sự vượt trội.",
             ]
+        )
+
+    elif final_label == "Bất thường":
+        level = "warning"
+        message = (
+            f"{vehicle.capitalize()} có dấu hiệu bất thường. "
+            "Cần kiểm tra thêm dữ liệu giá, tình trạng xe và thông tin tin đăng."
         )
 
     elif abs(deviation_pct) <= NORMAL_TOLERANCE_PCT:
         level = "success"
         message = (
-            f"Giá rao của {vehicle} khá sát giá đề xuất và chưa có dấu hiệu "
-            "bất thường mạnh. Có thể tiếp tục kiểm tra xe và thương lượng nhẹ."
+            f"Giá rao của {vehicle} khá sát giá đề xuất. "
+            "Có thể tiếp tục kiểm tra xe và thương lượng nhẹ."
         )
 
     elif residual < 0:
         level = "info"
         message = (
-            f"Giá rao của {vehicle} thấp hơn giá đề xuất nhưng chưa vượt "
-            "ngưỡng bất thường tổng hợp. Đây có thể là mức giá hấp dẫn, "
-            "song vẫn cần kiểm tra nguyên nhân giảm giá."
+            f"Giá rao của {vehicle} thấp hơn giá đề xuất nhưng chưa bị "
+            "gắn cờ bất thường. Cần kiểm tra nguyên nhân giảm giá."
         )
 
     else:
         level = "warning"
         message = (
-            f"Giá rao của {vehicle} cao hơn giá đề xuất nhưng chưa thuộc "
-            "top 5% bất thường. Nên thương lượng và đối chiếu với các xe tương đồng."
+            f"Giá rao của {vehicle} cao hơn giá đề xuất nhưng chưa bị "
+            "gắn cờ bất thường. Nên thương lượng và tham khảo thêm."
         )
 
     if final_label not in {"", "Bình thường"}:
@@ -402,19 +411,34 @@ def generate_recommendation(
     )
 
     return {
-        "level": level,
-        "message": message,
-        "details": details,
-        "predicted_price": predicted,
-        "asking_price": asking,
-        "residual": residual,
-        "deviation_pct": deviation_pct,
-        "anomaly_score": anomaly_score,
-        "threshold": threshold,
-        "is_anomaly": is_anomaly,
-        "label": final_label,
-    }
 
+        "level": level,
+
+        "message": message,
+
+        "recommendation": message,
+
+        "recommendation_code": level,
+
+        "details": details,
+
+        "predicted_price": predicted,
+
+        "asking_price": asking,
+
+        "residual": residual,
+
+        "deviation_pct": deviation_pct,
+
+        "anomaly_score": anomaly_score,
+
+        "threshold": threshold,
+
+        "is_anomaly": is_anomaly,
+
+        "label": final_label,
+
+    }
 
 # ============================================================================
 # BATCH RECOMMENDATION
@@ -444,114 +468,48 @@ def _row_price(
 def _batch_recommendation_for_row(
     row: pd.Series,
 ) -> dict[str, Any]:
-    predicted = _row_price(
-        row,
-        [
-            "predicted_price",
+
+    vehicle_info = row.to_dict()
+
+    recommendation = generate_recommendation(
+
+        predicted_price=row.get(
             "gia_du_doan",
-        ],
-    )
+            row.get("predicted_price"),
+        ),
 
-    asking = _row_price(
-        row,
-        [
-            "asking_price",
+        asking_price=row.get(
             "Giá_clean",
-            "Gia_clean",
-            "Gia_rao_clean",
-            "Giá rao",
-            "gia_rao",
-            "Giá",
-        ],
+            row.get("gia_rao"),
+        ),
+
+        anomaly_result=row,
+
+        vehicle_info=vehicle_info,
+
     )
-
-    is_anomaly = _safe_bool(
-        row.get("is_anomaly", False)
-    )
-
-    residual = (
-        _safe_float(row.get("residual"))
-        if "residual" in row.index
-        else (
-            asking - predicted
-            if pd.notna(asking) and pd.notna(predicted)
-            else np.nan
-        )
-    )
-
-    deviation_pct = (
-        residual / predicted * 100
-        if pd.notna(residual)
-        and pd.notna(predicted)
-        and predicted != 0
-        else np.nan
-    )
-
-    anomaly_score = _safe_float(
-        row.get("anomaly_score"),
-        default=0.0,
-    )
-
-    final_label = str(
-        row.get(
-            "flag_final",
-            row.get("label", "Bình thường"),
-        )
-    )
-
-    if is_anomaly and pd.notna(residual) and residual < 0:
-        code = "REVIEW_CHEAP_ANOMALY"
-        level = "error"
-        recommendation = (
-            "Giá quá thấp bất thường: ưu tiên kiểm tra giấy tờ, "
-            "tình trạng xe và tránh đặt cọc trước."
-        )
-
-    elif is_anomaly and pd.notna(residual) and residual > 0:
-        code = "NEGOTIATE_EXPENSIVE_ANOMALY"
-        level = "warning"
-        recommendation = (
-            "Giá quá cao bất thường: so sánh xe cùng nhóm và thương lượng mạnh."
-        )
-
-    elif pd.notna(deviation_pct) and abs(deviation_pct) <= NORMAL_TOLERANCE_PCT:
-        code = "PRICE_CLOSE_TO_MODEL"
-        level = "success"
-        recommendation = (
-            "Giá gần mức đề xuất: tiếp tục kiểm tra xe và thương lượng nhẹ."
-        )
-
-    elif pd.notna(residual) and residual < 0:
-        code = "LOWER_THAN_MODEL"
-        level = "info"
-        recommendation = (
-            "Giá thấp hơn đề xuất nhưng chưa bị gắn cờ: "
-            "kiểm tra nguyên nhân giảm giá."
-        )
-
-    elif pd.notna(residual) and residual > 0:
-        code = "HIGHER_THAN_MODEL"
-        level = "warning"
-        recommendation = (
-            "Giá cao hơn đề xuất: nên thương lượng hoặc tìm thêm tin so sánh."
-        )
-
-    else:
-        code = "INSUFFICIENT_DATA"
-        level = "info"
-        recommendation = (
-            "Chưa đủ dữ liệu giá để đưa ra khuyến nghị."
-        )
 
     return {
-        "recommendation_code": code,
-        "recommendation_level": level,
-        "recommendation": recommendation,
-        "recommendation_label": final_label,
-        "recommendation_anomaly_score": anomaly_score,
-        "recommendation_deviation_pct": deviation_pct,
-    }
 
+        "recommendation_code":
+            recommendation["level"],
+
+        "recommendation_level":
+            recommendation["level"],
+
+        "recommendation":
+            recommendation["message"],
+
+        "recommendation_label":
+            recommendation["label"],
+
+        "recommendation_anomaly_score":
+            recommendation["anomaly_score"],
+
+        "recommendation_deviation_pct":
+            recommendation["deviation_pct"],
+
+    }
 
 def generate_batch_recommendations(
     result_df: pd.DataFrame,

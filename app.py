@@ -43,6 +43,7 @@ from src.predictor import (
     predict_price,
 )
 from src.anomaly_detector import (
+    DEFAULT_CONFIG,
     analyze_batch_anomalies,
     analyze_price_anomaly,
 )
@@ -1172,10 +1173,11 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
     residual = float(asking_price_million) - predicted
     deviation_pct = residual / predicted * 100 if predicted else 0.0
 
-    score = float(result.get("anomaly_score", 0.0))
-    threshold = float(result.get("threshold", 95.0))
-    label = str(result.get("label", "Bình thường"))
-    is_anomaly = bool(result.get("is_anomaly", False))
+    score = float(result["anomaly_score"])
+    threshold = float(result["threshold"])
+            
+    label = str(result["label"])
+    is_anomaly = bool(result["is_anomaly"])
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Giá rao", format_million_vnd(asking_price_million))
@@ -1196,19 +1198,46 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
     else:
         st.error(f"🚨 Kết luận: Mức giá có dấu hiệu **{label}**")
 
-    st.caption(
-            f"Ngưỡng cảnh báo: {threshold:.1f}/100, được xác định từ chính dữ liệu thị trường. "
-            "Sau khi hệ thống tính điểm bất thường cho toàn bộ tin đăng, phân vị 95% của các điểm được chọn làm ngưỡng cảnh báo. "
-            "Vì vậy chỉ khoảng 5% tin đăng có điểm bất thường cao nhất mới được gắn cờ để người dùng xem xét kỹ hơn."
-            )
+    anomaly_quantile = float(
+        result.get(
+            "anomaly_quantile",
+            DEFAULT_CONFIG.anomaly_quantile,
+        )
+    )
+
+    quantile_pct = anomaly_quantile * 100
+    top_pct = (1.0 - anomaly_quantile) * 100
+
+    explain_text = (
+        f"Ngưỡng cảnh báo: {threshold:.1f}/100, được xác định từ "
+        "chính dữ liệu thị trường. Sau khi hệ thống tính điểm bất thường "
+        f"cho toàn bộ tin đăng, phân vị {quantile_pct:.0f}% của các điểm "
+        "được chọn làm ngưỡng cảnh báo. "
+        f"Vì vậy khoảng {top_pct:.0f}% tin đăng có điểm bất thường cao nhất "
+        "sẽ được gắn cờ để người dùng xem xét kỹ hơn."
+    )
 
     if score < threshold:
-        st.success(
-            f"Điểm bất thường ({score:.1f}) thấp hơn ngưỡng cảnh báo ({threshold:.1f}), nên tin đăng được đánh giá là Bình thường."
+        st.info(
+            f"""
+    **Điểm bất thường:** {score:.1f}/100
+
+    Điểm bất thường ({score:.1f}) thấp hơn ngưỡng cảnh báo ({threshold:.1f}),
+    nên tin đăng được đánh giá là **Bình thường**.
+
+    {explain_text}
+    """
         )
     else:
-        st.error(
-            f"Điểm bất thường ({score:.1f}) vượt ngưỡng cảnh báo ({threshold:.1f}), nên tin đăng được gắn cờ bất thường."
+        st.info(
+            f"""
+    **Điểm bất thường:** {score:.1f}/100
+
+    Điểm bất thường ({score:.1f}) vượt ngưỡng cảnh báo ({threshold:.1f}),
+    nên tin đăng được gắn cờ **bất thường**.
+
+    {explain_text}
+    """
         )
   
     show_figure(
@@ -1665,15 +1694,82 @@ elif menu == "Đánh giá & Báo cáo":
                 "`models/model_metrics.csv` để ứng dụng hiển thị tự động."
             )
             st.code(
-                "Phân khúc,Model,MAE (triệu),RMSE (triệu),R2\n"
+                "Phân khúc,Model,MAE (triệu đồng),RMSE (triệu đồng),R2\n"
                 "phổ thông,XGBoost,...,...,...\n"
                 "trung cấp,XGBoost,...,...,...\n"
                 "cao cấp,XGBoost,...,...,...",
                 language="text",
             )
         else:
-            st.dataframe(metrics_df, use_container_width=True, hide_index=True)
-            show_figure(plot_model_metrics(metrics_df))
+
+            # ======================================================
+            # FORMAT BẢNG ĐÁNH GIÁ MÔ HÌNH
+            # ======================================================
+
+            metrics_display = metrics_df.copy()
+
+            # Tự tìm tên cột MAE và RMSE
+            mae_col = next(
+                (c for c in metrics_display.columns if c.upper().startswith("MAE")),
+                None,
+            )
+
+            rmse_col = next(
+                (c for c in metrics_display.columns if c.upper().startswith("RMSE")),
+                None,
+            )
+
+            r2_col = next(
+                (c for c in metrics_display.columns if c.upper() == "R2"),
+                None,
+            )
+
+            # Nếu dữ liệu đang lưu là VNĐ thì đổi sang triệu
+            if mae_col is not None:
+                if metrics_display[mae_col].max() > 100000:
+                    metrics_display[mae_col] /= 1_000_000
+
+            if rmse_col is not None:
+                if metrics_display[rmse_col].max() > 100000:
+                    metrics_display[rmse_col] /= 1_000_000
+
+            column_config = {
+                "Phân khúc": st.column_config.TextColumn(
+                    "Phân khúc",
+                    width="medium",
+                ),
+                "Model": st.column_config.TextColumn(
+                    "Model",
+                    width="medium",
+                ),
+            }
+
+            if mae_col:
+                column_config[mae_col] = st.column_config.NumberColumn(
+                    "MAE (triệu đồng)",
+                    format="%.2f",
+                )
+
+            if rmse_col:
+                column_config[rmse_col] = st.column_config.NumberColumn(
+                    "RMSE (triệu đồng)",
+                    format="%.2f",
+                )
+
+            if r2_col:
+                column_config[r2_col] = st.column_config.NumberColumn(
+                    "R²",
+                    format="%.3f",
+                )
+
+            st.dataframe(
+                metrics_display,
+                use_container_width=True,
+                hide_index=True,
+                column_config=column_config,
+            )
+
+            show_figure(plot_model_metrics(metrics_display))
 
         st.markdown("#### Mô hình triển khai")
         deployed_df = pd.DataFrame(
@@ -1687,7 +1783,6 @@ elif menu == "Đánh giá & Báo cáo":
             ]
         )
         st.dataframe(deployed_df, use_container_width=True, hide_index=True)
-
 
 # =====================================================================
 # 7. NEW PREDICTION / ANALYSIS / RECOMMENDATION
@@ -1962,6 +2057,7 @@ else:
                 "anomaly_score",
                 "flag_final",
                 "flag_minmax",
+                "recommendation",
             ]
             
             missing_columns = [
@@ -1994,6 +2090,7 @@ else:
                     "anomaly_score",
                     "flag_final",
                     "flag_minmax",
+                    "recommendation",
                 ]
             ].copy()
             
@@ -2036,6 +2133,7 @@ else:
                     "anomaly_score": "Điểm bất thường",
                     "flag_final": "Kết luận",
                     "flag_minmax": "Tín hiệu giá",
+                    "recommendation": "Khuyến nghị",
                 },
                 inplace=True,
             )
@@ -2055,6 +2153,7 @@ else:
                     "Điểm bất thường",
                     "Kết luận",
                     "Tín hiệu giá",
+                    "Khuyến nghị",
                 ]
             ]
             
@@ -2063,10 +2162,10 @@ else:
                 value = str(value).strip()
 
                 if value == "Quá rẻ":
-                    return "🔴 Quá rẻ"
+                    return "🟡 Quá rẻ"
 
                 if value == "Quá đắt":
-                    return "🟠 Quá đắt"
+                    return "🔴 Quá đắt"
 
                 if value == "Bất thường":
                     return "🔴 Bất thường"
@@ -2079,31 +2178,7 @@ else:
             )
             
             # 8. TẠO KHUYẾN NGHỊ
-            # Ưu tiên dựa trên tín hiệu giá flag_minmax
-            
-            def create_recommendation(price_signal, conclusion):
-                price_signal = str(price_signal).strip()
-                conclusion = str(conclusion).strip()
-
-                if price_signal == "Quá rẻ":
-                    return "Nên kiểm tra kỹ"
-
-                if price_signal == "Quá đắt":
-                    return "Nên thương lượng"
-
-                if conclusion == "🔴 Bất thường":
-                    return "Cần kiểm tra thêm"
-
-                return "Giá hợp lý"
-            
-            display_df["Khuyến nghị"] = display_df.apply(
-                lambda row: create_recommendation(
-                    row["Tín hiệu giá"],
-                    row["Kết luận"],
-                ),
-                axis=1,
-            )
-            
+            # Dùng trực tiếp kết quả từ recommendation.py          
             # Có thể bỏ cột kỹ thuật này khỏi Dashboard
             display_df.drop(
                 columns=["Tín hiệu giá"],
@@ -2226,11 +2301,11 @@ else:
                     ),
                     "Khuyến nghị": st.column_config.TextColumn(
                         "Khuyến nghị",
-                        width="medium",
+                        width="large",
                     ),
                 },
             )
-
+            
             # 12. XUẤT DASHBOARD CSV
             # File Dashboard giống bảng đang hiển thị
             
@@ -2283,7 +2358,7 @@ else:
                     mime="text/csv",
                     use_container_width=True,
                     key="download_technical_csv",
-                )   
+                )       
                 
 # =====================================================================
 # 8. FOOTER
