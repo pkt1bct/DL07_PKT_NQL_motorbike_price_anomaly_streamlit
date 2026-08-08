@@ -1178,6 +1178,13 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
             
     label = str(result["label"])
     is_anomaly = bool(result["is_anomaly"])
+    
+    normal_deviation_pct = float(
+        result.get(
+            "normal_price_deviation_pct",
+            DEFAULT_CONFIG.normal_price_deviation_pct,
+        )
+    )
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Giá rao", format_million_vnd(asking_price_million))
@@ -1217,24 +1224,52 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
         "sẽ được gắn cờ để người dùng xem xét kỹ hơn."
     )
 
-    if score < threshold:
-        st.info(
-            f"""
+    if not is_anomaly:
+
+        if abs(deviation_pct) <= normal_deviation_pct:
+            st.info(
+                f"""
     **Điểm bất thường:** {score:.1f}/100
 
-    Điểm bất thường ({score:.1f}) thấp hơn ngưỡng cảnh báo ({threshold:.1f}),
-    nên tin đăng được đánh giá là **Bình thường**.
+    Giá rao chênh **{deviation_pct:+.1f}%** so với giá đề xuất,
+    nằm trong biên độ tham khảo **±{normal_deviation_pct:.1f}%**.
+
+    Vì vậy mức giá được đánh giá là **Bình thường**,
+    mặc dù một số tín hiệu kỹ thuật có thể làm điểm bất thường tương đối cao.
 
     {explain_text}
     """
-        )
+            )
+
+        else:
+            st.info(
+                f"""
+    **Điểm bất thường:** {score:.1f}/100
+
+    Giá rao chênh **{deviation_pct:+.1f}%** so với giá đề xuất,
+    đã vượt biên độ tham khảo **±{normal_deviation_pct:.1f}%**.
+
+    Tuy nhiên, điểm bất thường ({score:.1f}) chưa vượt ngưỡng cảnh báo
+    ({threshold:.1f}/100).
+
+    Vì vậy mức giá vẫn được đánh giá là **Bình thường**.
+
+    {explain_text}
+    """
+            )
+
     else:
         st.info(
             f"""
     **Điểm bất thường:** {score:.1f}/100
 
-    Điểm bất thường ({score:.1f}) vượt ngưỡng cảnh báo ({threshold:.1f}),
-    nên tin đăng được gắn cờ **bất thường**.
+    Giá rao chênh **{deviation_pct:+.1f}%** so với giá đề xuất,
+    vượt biên độ tham khảo **±{normal_deviation_pct:.1f}%**.
+
+    Đồng thời, điểm bất thường ({score:.1f}) vượt ngưỡng cảnh báo
+    ({threshold:.1f}/100).
+
+    Vì vậy mức giá được gắn cờ **{label}**.
 
     {explain_text}
     """
