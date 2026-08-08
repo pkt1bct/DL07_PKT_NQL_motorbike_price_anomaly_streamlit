@@ -907,18 +907,19 @@ def get_price_models() -> dict[str, Any]:
         caocap_path=str(MODEL_PATHS["cao cấp"]),
     )
 
+
 def render_vehicle_form(
-    options: dict[str, Any],
+    options: dict[str, list[Any]],
     prefix: str,
     include_asking_price: bool,
-    reference_df: pd.DataFrame,
 ) -> dict[str, Any]:
-    """Form nhập thông tin xe với các lựa chọn phụ thuộc nhau."""
-
+    """Form nhập thông tin một xe, dùng chung cho dự đoán và kiểm tra bất thường."""
+    
+    brand_options = options.get("brands", ["Honda"])
     brand_options = sorted(
         {
             str(value).strip()
-            for value in options.get("brands", ["Honda"])
+            for value in brand_options
             if str(value).strip()
         }
     )
@@ -932,6 +933,7 @@ def render_vehicle_form(
 
     model_map = options.get("models_by_brand", {})
 
+    # Chuẩn hóa tên thương hiệu và danh sách dòng xe.
     normalized_model_map = {
         str(brand_name).strip(): sorted(
             {
@@ -943,114 +945,53 @@ def render_vehicle_form(
         for brand_name, model_list in model_map.items()
     }
 
+    # Không lấy toàn bộ dòng xe làm fallback vì có thể lẫn thương hiệu.
     model_options = normalized_model_map.get(
         str(brand).strip(),
         [],
-    ) or ["Khác"]
+    )
+
+    if not model_options:
+        model_options = ["Khác"]
 
     col1, col2 = st.columns(2)
 
     with col1:
+        # Key thay đổi theo thương hiệu để không giữ dòng xe của hãng trước.
         model_name = st.selectbox(
             "Dòng xe *",
             options=model_options,
             key=f"{prefix}_model_{brand}",
-        )
-
-    vehicle_reference = reference_df.copy()
-
-    vehicle_reference["_brand_clean"] = (
-        vehicle_reference["Thương hiệu"]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-    )
-
-    vehicle_reference["_model_clean"] = (
-        vehicle_reference["Dòng xe"]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-    )
-
-    selected_rows = vehicle_reference.loc[
-        (vehicle_reference["_brand_clean"] == str(brand).strip())
-        & (vehicle_reference["_model_clean"] == str(model_name).strip())
-    ].copy()
-
-    vehicle_types = sorted(
-        {
-            str(value).strip()
-            for value in selected_rows["Loại xe"].dropna()
-            if str(value).strip()
-        }
-    )
-
-    if not vehicle_types:
-        vehicle_types = options.get(
-            "vehicle_types",
-            ["Xe số", "Tay ga", "Tay côn/Moto"],
-        )
-
+        )    
+        
     with col2:
+        vehicle_types = options.get("vehicle_types", ["Xe số", "Tay ga", "Tay côn/Moto"])
         vehicle_type = st.selectbox(
             "Loại xe *",
             options=vehicle_types,
-            key=f"{prefix}_vehicle_type_{brand}_{model_name}",
-        )
-
-    engine_options = sorted(
-        {
-            str(value).strip()
-            for value in selected_rows["Dung tích xe"].dropna()
-            if str(value).strip()
-        }
-    )
-
-    if not engine_options:
-        engine_options = options.get(
-            "engine_sizes",
-            [
-                "Dưới 50 cc",
-                "50 - 100 cc",
-                "100 - 175 cc",
-                "Trên 175 cc",
-                "Không biết rõ",
-            ],
-        )
-
-    origins = sorted(
-        {
-            str(value).strip()
-            for value in selected_rows["Xuất xứ"].dropna()
-            if str(value).strip()
-        }
-    )
-
-    if not origins:
-        origins = options.get(
-            "origins",
-            ["Việt Nam", "Nhật Bản", "Thái Lan", "Đang cập nhật"],
+            key=f"{prefix}_vehicle_type",
         )
 
     col3, col4 = st.columns(2)
-
     with col3:
+        engine_options = options.get(
+            "engine_sizes",
+            ["Dưới 50 cc", "50 - 100 cc", "100 - 175 cc", "Trên 175 cc", "Không biết rõ"],
+        )
         engine_size = st.selectbox(
             "Dung tích xe *",
             options=engine_options,
-            key=f"{prefix}_engine_{brand}_{model_name}",
+            index=safe_select_index(engine_options, "100 - 175 cc"),
+            key=f"{prefix}_engine",
         )
-
     with col4:
+        origins = options.get("origins", ["Việt Nam", "Nhật Bản", "Thái Lan", "Đang cập nhật"])
         origin = st.selectbox(
             "Xuất xứ *",
             options=origins,
-            key=f"{prefix}_origin_{brand}_{model_name}",
+            index=safe_select_index(origins, "Việt Nam"),
+            key=f"{prefix}_origin",
         )
-
-    # Giữ nguyên phần năm đăng ký, số km, quận/huyện,
-    # tiêu đề, mô tả và giá rao bên dưới.
 
     current_year = dt.date.today().year
     col5, col6 = st.columns(2)
@@ -1651,9 +1592,7 @@ elif menu == "Đánh giá & Báo cáo":
             Dự án thử nghiệm nhiều thuật toán gồm Linear Regression, Decision Tree,
             Random Forest, XGBoost, LightGBM, CatBoost và SVR. 
             
-            Hệ thống sử dụng kiến thức thị trường xe máy Việt Nam từ "Thương Hiệu" và "Dòng Xe" để phân khúc xe và phản ánh đúng cách phân loại của thị trường xe máy Việt Nam gồm Phổ thông, Trung Cấp, và Cao Cấp.
-            
-            Các mô hình dự đoán được xây dựng và huấn luyện riêng cho từng phân khúc xe trước khi được lưu trong thư mục models/ để phục vụ triển khai hệ thống, dự đoán giá..
+            Các mô hình dự đoán được xây dựng và huấn luyện riêng cho từng phân khúc xe trước khi được lưu trong thư mục models/ để phục vụ triển khai hệ thống..
             """
         )
 
@@ -1665,82 +1604,15 @@ elif menu == "Đánh giá & Báo cáo":
                 "`models/model_metrics.csv` để ứng dụng hiển thị tự động."
             )
             st.code(
-                "Phân khúc,Model,MAE (triệu đồng),RMSE (triệu đồng),R2\n"
+                "Phân khúc,Model,MAE (triệu),RMSE (triệu),R2\n"
                 "phổ thông,XGBoost,...,...,...\n"
                 "trung cấp,XGBoost,...,...,...\n"
                 "cao cấp,XGBoost,...,...,...",
                 language="text",
             )
         else:
-
-            # ======================================================
-            # FORMAT BẢNG ĐÁNH GIÁ MÔ HÌNH
-            # ======================================================
-
-            metrics_display = metrics_df.copy()
-
-            # Tự tìm tên cột MAE và RMSE
-            mae_col = next(
-                (c for c in metrics_display.columns if c.upper().startswith("MAE")),
-                None,
-            )
-
-            rmse_col = next(
-                (c for c in metrics_display.columns if c.upper().startswith("RMSE")),
-                None,
-            )
-
-            r2_col = next(
-                (c for c in metrics_display.columns if c.upper() == "R2"),
-                None,
-            )
-
-            # Nếu dữ liệu đang lưu là VNĐ thì đổi sang triệu
-            if mae_col is not None:
-                if metrics_display[mae_col].max() > 100000:
-                    metrics_display[mae_col] /= 1_000_000
-
-            if rmse_col is not None:
-                if metrics_display[rmse_col].max() > 100000:
-                    metrics_display[rmse_col] /= 1_000_000
-
-            column_config = {
-                "Phân khúc": st.column_config.TextColumn(
-                    "Phân khúc",
-                    width="medium",
-                ),
-                "Model": st.column_config.TextColumn(
-                    "Model",
-                    width="medium",
-                ),
-            }
-
-            if mae_col:
-                column_config[mae_col] = st.column_config.NumberColumn(
-                    "MAE (triệu đồng)",
-                    format="%.2f",
-                )
-
-            if rmse_col:
-                column_config[rmse_col] = st.column_config.NumberColumn(
-                    "RMSE (triệu đồng)",
-                    format="%.2f",
-                )
-
-            if r2_col:
-                column_config[r2_col] = st.column_config.NumberColumn(
-                    "R²",
-                    format="%.3f",
-                )
-
-            st.dataframe(
-                metrics_display,
-                use_container_width=True,
-                hide_index=True,
-                column_config=column_config,
-            )
-
-            show_figure(plot_model_metrics(metrics_display))
+            st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+            show_figure(plot_model_metrics(metrics_df))
 
         st.markdown("#### Mô hình triển khai")
         deployed_df = pd.DataFrame(
@@ -1754,6 +1626,7 @@ elif menu == "Đánh giá & Báo cáo":
             ]
         )
         st.dataframe(deployed_df, use_container_width=True, hide_index=True)
+
 
 # =====================================================================
 # 7. NEW PREDICTION / ANALYSIS / RECOMMENDATION
@@ -1785,7 +1658,6 @@ else:
             form_options,
             prefix="prediction",
             include_asking_price=False,
-            reference_df=df_raw,
         )
 
         submit_prediction = st.button(
@@ -1831,7 +1703,6 @@ else:
             form_options,
             prefix="anomaly",
             include_asking_price=True,
-            reference_df=df_raw,
         )
 
         submit_anomaly = st.button(
@@ -2349,7 +2220,7 @@ else:
                     mime="text/csv",
                     use_container_width=True,
                     key="download_technical_csv",
-                )       
+                )   
                 
 # =====================================================================
 # 8. FOOTER
