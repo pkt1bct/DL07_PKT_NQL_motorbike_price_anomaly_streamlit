@@ -79,7 +79,7 @@ MIN_GROUP_SIZE = 10
 ISO_N_ESTIMATORS = 300
 ISO_CONTAMINATION = 0.05
 
-ANOMALY_QUANTILE = 0.7
+ANOMALY_QUANTILE = 0.5
 
 WEIGHT_RESID = 0.35
 WEIGHT_MINMAX = 0.20
@@ -90,9 +90,6 @@ EQUAL_WEIGHT = 0.25
 
 RESID_LOW_THRESHOLD = -3.0
 RESID_HIGH_THRESHOLD = 3.0
-
-# Biên độ chênh lệch giá được xem là bình thường
-NORMAL_PRICE_DEVIATION_PCT = 20.0
 
 MAD_SCALE = 1.4826
 
@@ -134,14 +131,11 @@ class AnomalyConfiguration:
     iso_n_estimators: int = ISO_N_ESTIMATORS
     iso_contamination: float = ISO_CONTAMINATION
     anomaly_quantile: float = ANOMALY_QUANTILE
-    
     weight_resid: float = WEIGHT_RESID
     weight_minmax: float = WEIGHT_MINMAX
     weight_range: float = WEIGHT_RANGE
     weight_iso: float = WEIGHT_ISO
 
-    # Biên độ chênh lệch giá được xem là bình thường (%)
-    normal_price_deviation_pct: float = NORMAL_PRICE_DEVIATION_PCT
 
 DEFAULT_CONFIG = AnomalyConfiguration()
 
@@ -568,45 +562,15 @@ def flag_range(row: pd.Series) -> str:
     return "Bình thường"
 
 
-def flag_final(
-    row: pd.Series,
-    config: AnomalyConfiguration = DEFAULT_CONFIG,
-) -> str:
-    """
-    Kết luận cuối cùng về mức giá.
-
-    - Lệch <= biên độ cấu hình: Bình thường
-    - Lệch > biên độ nhưng score chưa vượt threshold: Bình thường
-    - Score vượt threshold và giá thấp: Quá rẻ
-    - Score vượt threshold và giá cao: Quá đắt
-    """
-
-    predicted = float(
-        row.get("gia_du_doan", 0.0)
-    )
-
-    residual = float(
-        row.get("residual", 0.0)
-    )
-
-    if predicted != 0:
-        deviation_pct = residual / predicted * 100
-    else:
-        deviation_pct = 0.0
-
-    # Biên giá hợp lý lấy từ cấu hình
-    if abs(deviation_pct) <= config.normal_price_deviation_pct:
-        return "Bình thường"
-
-    # Điểm chưa đủ cao
+def flag_final(row: pd.Series) -> str:
     if not bool(row.get("is_anomaly", False)):
         return "Bình thường"
 
-    # Bất thường thực sự
-    if residual < 0:
-        return "Quá rẻ"
-
-    return "Quá đắt"
+    return (
+        "Quá rẻ"
+        if float(row.get("residual", 0.0)) < 0
+        else "Quá đắt"
+    )
 
 
 # ============================================================================
@@ -799,33 +763,9 @@ def score_anomaly_dataframe(
 
     result["threshold"] = threshold
 
-    # --------------------------------------------------------
-    # Độ lệch giữa giá rao và giá mô hình (%)
-    # --------------------------------------------------------
-    result["deviation_pct"] = np.where(
-        result["gia_du_doan"] != 0,
-        result["residual"] / result["gia_du_doan"] * 100,
-        0.0,
-    )
-
-    # Cờ theo anomaly score thuần túy
-    result["score_exceeds_threshold"] = (
-        result["anomaly_score"] >= threshold
-    )
-
-    # --------------------------------------------------------
-    # CỜ BẤT THƯỜNG CUỐI CÙNG
-    #
-    # Một mức giá chỉ được xem là bất thường khi:
-    # 1. anomaly score vượt threshold
-    # 2. giá rao lệch hơn biên độ cho phép so với giá dự đoán
-    # --------------------------------------------------------
     result["is_anomaly"] = (
-        result["score_exceeds_threshold"]
-        & (
-            result["deviation_pct"].abs()
-            > config.normal_price_deviation_pct
-        )
+        result["anomaly_score"]
+        >= threshold
     )
 
     # --------------------------------------------------------
@@ -856,7 +796,7 @@ def score_anomaly_dataframe(
     )
 
     result["flag_final"] = result.apply(
-        lambda row: flag_final(row, config=config),
+        flag_final,
         axis=1,
     )
 
@@ -1075,16 +1015,6 @@ def analyze_price_anomaly(
         "is_anomaly_equal": bool(row["is_anomaly_equal"]),
         "anomaly_score": float(row["anomaly_score"]),
         "threshold": float(row["threshold"]),
-        
-        "anomaly_quantile": float(
-            config.anomaly_quantile
-        ),
-        
-        # Biên độ giá bình thường thực tế được sử dụng
-        "normal_price_deviation_pct": float(
-            config.normal_price_deviation_pct
-        ),
-        
         "is_anomaly": bool(row["is_anomaly"]),
         "flag_resid": str(row["flag_resid"]),
         "flag_minmax": str(row["flag_minmax"]),

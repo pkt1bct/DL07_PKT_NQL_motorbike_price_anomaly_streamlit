@@ -1172,19 +1172,10 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
     residual = float(asking_price_million) - predicted
     deviation_pct = residual / predicted * 100 if predicted else 0.0
 
-    score = float(result["anomaly_score"])
-    threshold = float(result["threshold"])
-            
-    label = str(result["label"])
-    is_anomaly = bool(result["is_anomaly"])
-    
-    # Biên độ giá hợp lý lấy từ anomaly_detector
-    normal_deviation_pct = float(
-        result.get(
-            "normal_price_deviation_pct",
-            DEFAULT_CONFIG.normal_price_deviation_pct,
-        )
-    )
+    score = float(result.get("anomaly_score", 0.0))
+    threshold = float(result.get("threshold", 95.0))
+    label = str(result.get("label", "Bình thường"))
+    is_anomaly = bool(result.get("is_anomaly", False))
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Giá rao", format_million_vnd(asking_price_million))
@@ -1205,75 +1196,19 @@ def render_anomaly_result(result: dict[str, Any], asking_price_million: float) -
     else:
         st.error(f"🚨 Kết luận: Mức giá có dấu hiệu **{label}**")
 
-    # Ngưỡng quantile lấy từ anomaly_detector
-    anomaly_quantile = float(
-        result.get(
-            "anomaly_quantile",
-            DEFAULT_CONFIG.anomaly_quantile,
+    st.caption(
+            f"Ngưỡng cảnh báo: {threshold:.1f}/100, được xác định từ chính dữ liệu thị trường. "
+            "Sau khi hệ thống tính điểm bất thường cho toàn bộ tin đăng, phân vị 95% của các điểm được chọn làm ngưỡng cảnh báo. "
+            "Vì vậy chỉ khoảng 5% tin đăng có điểm bất thường cao nhất mới được gắn cờ để người dùng xem xét kỹ hơn."
+            )
+
+    if score < threshold:
+        st.success(
+            f"Điểm bất thường ({score:.1f}) thấp hơn ngưỡng cảnh báo ({threshold:.1f}), nên tin đăng được đánh giá là Bình thường."
         )
-    )
-
-    quantile_pct = anomaly_quantile * 100
-    top_pct = (1.0 - anomaly_quantile) * 100
-
-    explain_text = (
-        f"Ngưỡng cảnh báo: {threshold:.1f}/100, được xác định từ "
-        "chính dữ liệu thị trường. Sau khi hệ thống tính điểm bất thường "
-        f"cho toàn bộ tin đăng, phân vị {quantile_pct:.0f}% của các điểm "
-        "được chọn làm ngưỡng cảnh báo. "
-        f"Vì vậy khoảng {top_pct:.0f}% tin đăng có điểm bất thường cao nhất "
-        "sẽ được gắn cờ để người dùng xem xét kỹ hơn."
-    )
-
-    if not is_anomaly:
-
-        if abs(deviation_pct) <= normal_deviation_pct:
-            st.info(
-                f"""
-    **Điểm bất thường:** {score:.1f}/100
-
-    Giá rao chênh **{deviation_pct:+.1f}%** so với giá đề xuất,
-    nằm trong biên độ tham khảo **±{normal_deviation_pct:.1f}%**.
-
-    Vì vậy mức giá được đánh giá là **Bình thường**,
-    mặc dù một số tín hiệu kỹ thuật có thể làm điểm bất thường tương đối cao.
-
-    {explain_text}
-    """
-            )
-
-        else:
-            st.info(
-                f"""
-    **Điểm bất thường:** {score:.1f}/100
-
-    Giá rao chênh **{deviation_pct:+.1f}%** so với giá đề xuất,
-    đã vượt biên độ tham khảo **±{normal_deviation_pct:.1f}%**.
-
-    Tuy nhiên, điểm bất thường ({score:.1f}) chưa vượt ngưỡng cảnh báo
-    ({threshold:.1f}/100).
-
-    Vì vậy mức giá vẫn được đánh giá là **Bình thường**.
-
-    {explain_text}
-    """
-            )
-
     else:
-        st.info(
-            f"""
-    **Điểm bất thường:** {score:.1f}/100
-
-    Giá rao chênh **{deviation_pct:+.1f}%** so với giá đề xuất,
-    vượt biên độ tham khảo **±{normal_deviation_pct:.1f}%**.
-
-    Đồng thời, điểm bất thường ({score:.1f}) vượt ngưỡng cảnh báo
-    ({threshold:.1f}/100).
-
-    Vì vậy mức giá được gắn cờ **{label}**.
-
-    {explain_text}
-    """
+        st.error(
+            f"Điểm bất thường ({score:.1f}) vượt ngưỡng cảnh báo ({threshold:.1f}), nên tin đăng được gắn cờ bất thường."
         )
   
     show_figure(
@@ -2093,7 +2028,6 @@ else:
                 "anomaly_score",
                 "flag_final",
                 "flag_minmax",
-                "recommendation",
             ]
             
             missing_columns = [
@@ -2126,7 +2060,6 @@ else:
                     "anomaly_score",
                     "flag_final",
                     "flag_minmax",
-                    "recommendation",
                 ]
             ].copy()
             
@@ -2169,7 +2102,6 @@ else:
                     "anomaly_score": "Điểm bất thường",
                     "flag_final": "Kết luận",
                     "flag_minmax": "Tín hiệu giá",
-                    "recommendation": "Khuyến nghị",
                 },
                 inplace=True,
             )
@@ -2189,7 +2121,6 @@ else:
                     "Điểm bất thường",
                     "Kết luận",
                     "Tín hiệu giá",
-                    "Khuyến nghị",
                 ]
             ]
             
@@ -2198,10 +2129,10 @@ else:
                 value = str(value).strip()
 
                 if value == "Quá rẻ":
-                    return "🟡 Quá rẻ"
+                    return "🔴 Quá rẻ"
 
                 if value == "Quá đắt":
-                    return "🔴 Quá đắt"
+                    return "🟠 Quá đắt"
 
                 if value == "Bất thường":
                     return "🔴 Bất thường"
@@ -2214,7 +2145,31 @@ else:
             )
             
             # 8. TẠO KHUYẾN NGHỊ
-            # Dùng trực tiếp kết quả từ recommendation.py          
+            # Ưu tiên dựa trên tín hiệu giá flag_minmax
+            
+            def create_recommendation(price_signal, conclusion):
+                price_signal = str(price_signal).strip()
+                conclusion = str(conclusion).strip()
+
+                if price_signal == "Quá rẻ":
+                    return "Nên kiểm tra kỹ"
+
+                if price_signal == "Quá đắt":
+                    return "Nên thương lượng"
+
+                if conclusion == "🔴 Bất thường":
+                    return "Cần kiểm tra thêm"
+
+                return "Giá hợp lý"
+            
+            display_df["Khuyến nghị"] = display_df.apply(
+                lambda row: create_recommendation(
+                    row["Tín hiệu giá"],
+                    row["Kết luận"],
+                ),
+                axis=1,
+            )
+            
             # Có thể bỏ cột kỹ thuật này khỏi Dashboard
             display_df.drop(
                 columns=["Tín hiệu giá"],
@@ -2337,11 +2292,11 @@ else:
                     ),
                     "Khuyến nghị": st.column_config.TextColumn(
                         "Khuyến nghị",
-                        width="large",
+                        width="medium",
                     ),
                 },
             )
-            
+
             # 12. XUẤT DASHBOARD CSV
             # File Dashboard giống bảng đang hiển thị
             
